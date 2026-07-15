@@ -376,12 +376,13 @@ async function loadPoolConnectedWorkers(): Promise<Worker[]> {
 }
 
 function mergeWorkers(poolWorkers: Worker[], devices: Worker[]): Worker[] {
-  if (poolWorkers.length === 0) return devices;
-  if (devices.length === 0) return poolWorkers;
+  const pool = dedupeWorkersByName(poolWorkers);
+  if (pool.length === 0) return devices;
+  if (devices.length === 0) return pool;
 
   const usedDevices = new Set<string>();
 
-  const merged = poolWorkers.map((poolWorker) => {
+  const merged = pool.map((poolWorker) => {
     const device = devices.find((candidate) => {
       if (usedDevices.has(candidate.id)) return false;
       const nameMatch =
@@ -413,6 +414,32 @@ function mergeWorkers(poolWorkers: Worker[], devices: Worker[]): Worker[] {
 
   const leftovers = devices.filter((device) => !usedDevices.has(device.id));
   return [...merged, ...leftovers];
+}
+
+/** Prefer the freshest pool session when reconnects left duplicates. */
+function dedupeWorkersByName(workers: Worker[]): Worker[] {
+  const byKey = new Map<string, Worker>();
+  for (const worker of workers) {
+    const key = `${worker.address}\0${worker.name}`.toLowerCase();
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, worker);
+      continue;
+    }
+    const existingSeen = new Date(existing.lastSeen).getTime();
+    const nextSeen = new Date(worker.lastSeen).getTime();
+    if (nextSeen >= existingSeen) {
+      byKey.set(key, {
+        ...worker,
+        shares: Math.max(worker.shares, existing.shares),
+        bestDifficulty: Math.max(worker.bestDifficulty, existing.bestDifficulty),
+      });
+    } else {
+      existing.shares = Math.max(existing.shares, worker.shares);
+      existing.bestDifficulty = Math.max(existing.bestDifficulty, worker.bestDifficulty);
+    }
+  }
+  return Array.from(byKey.values());
 }
 
 function appendLiveHashrate(chart: ChartPoint[], liveHashrate: number): ChartPoint[] {
