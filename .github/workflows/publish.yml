@@ -55,8 +55,9 @@ jobs:
           platforms: ${{ matrix.platform }}
           provenance: false
           outputs: type=image,name=${{ steps.meta.outputs.image }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
+          # mode=max exports layers + BuildKit cache mounts (.next/cache, npm)
+          cache-from: type=gha,scope=lido-ui-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=lido-ui-${{ matrix.platform }}
 
       - name: Export digest
         run: |
