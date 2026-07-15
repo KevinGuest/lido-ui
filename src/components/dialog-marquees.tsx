@@ -18,7 +18,7 @@ function MarqueeTrack({
     <div className="overflow-hidden whitespace-nowrap" aria-hidden="true">
       <div
         className={cn(
-          "inline-flex w-max font-mono text-[10px] font-semibold uppercase tracking-[0.22em]",
+          "inline-flex w-max font-mono text-[10px] font-bold uppercase tracking-[0.22em]",
           reverse ? "animate-lido-marquee-reverse" : "animate-lido-marquee",
         )}
       >
@@ -40,7 +40,7 @@ export function DialogMarquees({
 }) {
   const band =
     tone === "connect"
-      ? "bg-sky-500 text-sky-950 dark:bg-sky-400 dark:text-sky-950"
+      ? "bg-blue-600 text-white dark:bg-blue-600 dark:text-white"
       : "bg-rose-600 text-rose-50 dark:bg-rose-500 dark:text-rose-50";
 
   return (
