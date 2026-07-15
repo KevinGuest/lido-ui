@@ -146,11 +146,11 @@
 }
 
 .animate-lido-marquee {
-  animation: lido-marquee 40s linear infinite;
+  animation: lido-marquee 70s linear infinite;
 }
 
 .animate-lido-marquee-reverse {
-  animation: lido-marquee-reverse 40s linear infinite;
+  animation: lido-marquee-reverse 70s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
