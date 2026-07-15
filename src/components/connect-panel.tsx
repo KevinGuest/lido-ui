@@ -28,7 +28,7 @@ function CopyRow({ label, value }: { label: string; value: string }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-3 last:border-0">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 py-3 last:border-0">
       <div className="min-w-0">
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="truncate font-mono text-sm">{value}</p>
@@ -79,7 +79,7 @@ export function ConnectDialog({
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-background shadow-xl">
+      <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border/50 bg-background shadow-xl">
         <DialogMarquees text="Connect · Stratum · Point your rig" tone="connect">
           <Card className="border-0 shadow-none">
             <CardHeader>
@@ -101,7 +101,7 @@ export function ConnectDialog({
               </CardAction>
             </CardHeader>
             <CardContent>
-              <div className="rounded-lg border border-border px-3">
+              <div className="rounded-xl border border-border/50 px-3">
                 <CopyRow label="Stratum URL" value={stratumUrl} />
                 <CopyRow label="Username" value={usernameHint} />
                 <CopyRow label="Password" value="x" />

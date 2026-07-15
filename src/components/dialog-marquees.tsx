@@ -45,11 +45,11 @@ export function DialogMarquees({
 
   return (
     <>
-      <div className={cn("border-b border-black/15 py-1.5", band)}>
+      <div className={cn("py-1.5", band)}>
         <MarqueeTrack text={text} />
       </div>
       {children}
-      <div className={cn("border-t border-black/15 py-1.5", band)}>
+      <div className={cn("py-1.5", band)}>
         <MarqueeTrack text={text} reverse />
       </div>
     </>
