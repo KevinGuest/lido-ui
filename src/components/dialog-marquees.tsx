@@ -41,8 +41,8 @@ export function DialogMarquees({
   const band =
     tone === "connect"
       ? "bg-[#1d59b3] text-white"
-      : "bg-rose-600 text-rose-50 dark:bg-rose-500 dark:text-rose-50";
-
+      : "bg-red-500 text-white";
+      
   return (
     <>
       <div className={cn("py-1.5", band)}>

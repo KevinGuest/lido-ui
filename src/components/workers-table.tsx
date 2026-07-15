@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Flame, Thermometer, X } from "lucide-react";
+import { Flame, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -166,15 +166,6 @@ function WorkerDialog({
       value: (
         <DetailValue>
           {worker.uptimeSeconds == null ? "n/a" : formatUptime(worker.uptimeSeconds)}
-        </DetailValue>
-      ),
-    },
-    {
-      label: "Temp",
-      value: (
-        <DetailValue>
-          <Thermometer className="size-3.5 text-sky-500" strokeWidth={1.75} />
-          {worker.tempC == null ? "n/a" : `${worker.tempC.toFixed(0)}°C`}
         </DetailValue>
       ),
     },
