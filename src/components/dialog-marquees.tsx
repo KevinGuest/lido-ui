@@ -40,7 +40,7 @@ export function DialogMarquees({
 }) {
   const band =
     tone === "connect"
-      ? "bg-blue-800 text-white dark:bg-blue-800 dark:text-white"
+      ? "bg-[#1d59b3] text-white"
       : "bg-rose-600 text-rose-50 dark:bg-rose-500 dark:text-rose-50";
 
   return (
