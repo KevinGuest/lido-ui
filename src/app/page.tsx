@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const dashboard = await getDashboard();
-  const { pool, chart, workers, foundBlocks, network, difficultyAdjustment, uptimeSeconds } =
+  const { pool, chart, chartSince, minerCharts, workers, foundBlocks, network, difficultyAdjustment, uptimeSeconds } =
     dashboard;
 
   return (
@@ -72,11 +72,17 @@ export default async function HomePage() {
         />
       </div>
 
-      <HashrateChart data={chart} />
+      <HashrateChart
+        data={chart}
+        minerCharts={minerCharts}
+        workers={workers}
+        chartSince={chartSince}
+        liveHashrate={pool.totalHashRate}
+      />
 
       <WorkersTable workers={workers} totalMiners={pool.totalMiners} />
 
-      <p className="text-sm text-muted-foreground">
+      <p className="text-center text-sm text-muted-foreground">
         Lido is a Fully Open Source Solo Bitcoin Mining Pool fork of Public Pool.
       </p>
     </div>

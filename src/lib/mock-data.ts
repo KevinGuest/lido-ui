@@ -41,6 +41,12 @@ export type ChartPoint = {
   data: number;
 };
 
+export type MinerChartSeries = {
+  id: string;
+  name: string;
+  chart: ChartPoint[];
+};
+
 export type Worker = {
   id: string;
   name: string;
@@ -48,6 +54,7 @@ export type Worker = {
   address: string;
   sessionId: string;
   hashrate: number;
+  shares: number;
   bestDifficulty: number;
   uptimeSeconds: number | null;
   lastSeen: string | null;
@@ -61,6 +68,9 @@ export type DashboardPayload = {
   source: "mock" | "live";
   pool: PoolSummary;
   chart: ChartPoint[];
+  minerCharts: MinerChartSeries[];
+  /** ISO timestamp — earliest chart data (pool start). */
+  chartSince: string;
   workers: Worker[];
   foundBlocks: FoundBlock[];
   network: NetworkInfo;
@@ -72,18 +82,29 @@ function hoursAgo(hours: number) {
   return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 }
 
-function buildMockChart(): ChartPoint[] {
+/** 24h × 30m buckets — used when the pool has no hashrate history yet. */
+export function buildZeroChart(hours = 24, intervalMinutes = 30): ChartPoint[] {
   const points: ChartPoint[] = [];
   const now = Date.now();
-  for (let i = 48; i >= 1; i -= 1) {
-    const base = 5.2e14;
-    const wobble = Math.sin(i / 4) * 4e13 + Math.cos(i / 7) * 2e13;
+  const steps = Math.max(1, Math.round((hours * 60) / intervalMinutes));
+  for (let i = steps; i >= 1; i -= 1) {
     points.push({
-      label: new Date(now - i * 30 * 60 * 1000).toISOString(),
-      data: Math.max(0, base + wobble),
+      label: new Date(now - i * intervalMinutes * 60 * 1000).toISOString(),
+      data: 0,
     });
   }
   return points;
+}
+
+function buildMockChart(): ChartPoint[] {
+  return buildZeroChart(168, 60).map((point, index) => {
+    const base = 5.2e14;
+    const wobble = Math.sin(index / 4) * 4e13 + Math.cos(index / 7) * 2e13;
+    return {
+      ...point,
+      data: Math.max(0, base + wobble),
+    };
+  });
 }
 
 export const mockDashboard: DashboardPayload = {
@@ -97,6 +118,7 @@ export const mockDashboard: DashboardPayload = {
     fee: 0,
   },
   chart: buildMockChart(),
+  chartSince: hoursAgo(168),
   network: {
     height: 902_184,
     nextHeight: 902_185,
@@ -134,6 +156,7 @@ export const mockDashboard: DashboardPayload = {
       address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
       sessionId: "a1f3",
       hashrate: 1.35e12,
+      shares: 18_420,
       bestDifficulty: 68_274_102,
       uptimeSeconds: 86_400 * 3,
       lastSeen: new Date(Date.now() - 8_000).toISOString(),
@@ -149,6 +172,7 @@ export const mockDashboard: DashboardPayload = {
       address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
       sessionId: "b2c4",
       hashrate: 1.32e12,
+      shares: 14_110,
       bestDifficulty: 41_002_110,
       uptimeSeconds: 86_400 * 2,
       lastSeen: new Date(Date.now() - 12_000).toISOString(),
@@ -164,6 +188,7 @@ export const mockDashboard: DashboardPayload = {
       address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
       sessionId: "c3d5",
       hashrate: 1.28e12,
+      shares: 22_880,
       bestDifficulty: 22_441_200,
       uptimeSeconds: 86_400 * 5,
       lastSeen: new Date(Date.now() - 5_000).toISOString(),
@@ -179,6 +204,7 @@ export const mockDashboard: DashboardPayload = {
       address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
       sessionId: "d4e6",
       hashrate: 1.4e12,
+      shares: 9_640,
       bestDifficulty: 12_845_023,
       uptimeSeconds: 86_400 * 1,
       lastSeen: new Date(Date.now() - 3_000).toISOString(),
@@ -186,6 +212,28 @@ export const mockDashboard: DashboardPayload = {
       tempC: 63,
       dashboardUrl: "http://192.168.1.54",
       blocksFound: 0,
+    },
+  ],
+  minerCharts: [
+    {
+      id: "1",
+      name: "nerdqaxe-1",
+      chart: buildMockChart().map((p) => ({ ...p, data: p.data * 0.25 })),
+    },
+    {
+      id: "2",
+      name: "nerdqaxe-2",
+      chart: buildMockChart().map((p) => ({ ...p, data: p.data * 0.24 })),
+    },
+    {
+      id: "3",
+      name: "nerdqaxe-3",
+      chart: buildMockChart().map((p) => ({ ...p, data: p.data * 0.23 })),
+    },
+    {
+      id: "4",
+      name: "nerdqaxe-4",
+      chart: buildMockChart().map((p) => ({ ...p, data: p.data * 0.26 })),
     },
   ],
 };

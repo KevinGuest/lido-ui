@@ -1,6 +1,6 @@
 import { unstable_noStore as noStore } from "next/cache";
 
-import { mockDashboard, type ChartPoint, type DashboardPayload, type DifficultyAdjustment, type FoundBlock, type NetworkInfo, type Worker } from "@/lib/mock-data";
+import { mockDashboard, type ChartPoint, type DashboardPayload, type DifficultyAdjustment, type FoundBlock, type MinerChartSeries, type NetworkInfo, type Worker } from "@/lib/mock-data";
 import { discoverMinerHosts } from "@/lib/network-scan";
 
 /** Dynamic access so Next does not inline these at docker build time. */
@@ -82,6 +82,7 @@ type PoolWorker = {
   lastSeen: string;
   userAgent?: string;
   address?: string;
+  shares?: number;
 };
 
 type PoolClientResponse = {
@@ -235,6 +236,7 @@ function poolWorkerToWorker(session: PoolWorker, fallbackAddress = ""): Worker {
     address,
     sessionId: session.sessionId,
     hashrate: session.hashRate,
+    shares: Number(session.shares) || 0,
     bestDifficulty: parseDifficulty(session.bestDifficulty),
     uptimeSeconds,
     lastSeen: session.lastSeen,
@@ -322,6 +324,7 @@ async function loadMinerDevice(host: string): Promise<Worker | null> {
     address: parsed.address,
     sessionId: "",
     hashrate: normalizedHashrate,
+    shares: 0,
     bestDifficulty,
     uptimeSeconds,
     lastSeen: new Date().toISOString(),
@@ -399,6 +402,7 @@ function mergeWorkers(poolWorkers: Worker[], devices: Worker[]): Worker[] {
       ...poolWorker,
       userAgent: device.userAgent || poolWorker.userAgent,
       hashrate: poolWorker.hashrate || device.hashrate,
+      shares: poolWorker.shares || device.shares,
       bestDifficulty: Math.max(poolWorker.bestDifficulty, device.bestDifficulty),
       uptimeSeconds: device.uptimeSeconds ?? poolWorker.uptimeSeconds,
       tempC: device.tempC ?? poolWorker.tempC,
@@ -409,6 +413,46 @@ function mergeWorkers(poolWorkers: Worker[], devices: Worker[]): Worker[] {
 
   const leftovers = devices.filter((device) => !usedDevices.has(device.id));
   return [...merged, ...leftovers];
+}
+
+function appendLiveHashrate(chart: ChartPoint[], liveHashrate: number): ChartPoint[] {
+  if (!Number.isFinite(liveHashrate) || liveHashrate <= 0) return chart;
+  const now = new Date().toISOString();
+  if (chart.length === 0) {
+    return [{ label: now, data: liveHashrate }];
+  }
+  const last = chart[chart.length - 1];
+  const lastTs = new Date(last.label).getTime();
+  const ageMs = Date.now() - lastTs;
+  if (ageMs > 90_000) {
+    return [...chart, { label: now, data: liveHashrate }];
+  }
+  return [...chart.slice(0, -1), { label: now, data: liveHashrate }];
+}
+
+function chartSinceIso(info: LiveInfoResponse): string {
+  if (info.uptime) {
+    const started = new Date(info.uptime as string | Date).getTime();
+    if (Number.isFinite(started)) return new Date(started).toISOString();
+  }
+  return new Date().toISOString();
+}
+
+async function loadMinerCharts(chartSince: string): Promise<MinerChartSeries[]> {
+  const from = encodeURIComponent(chartSince);
+  try {
+    const bulk = await fetchPool<MinerChartSeries[]>(`/api/info/chart/miners?from=${from}`);
+    if (Array.isArray(bulk) && bulk.length > 0) {
+      return bulk.map((row) => ({
+        id: row.id || row.name,
+        name: row.name,
+        chart: Array.isArray(row.chart) ? row.chart : [],
+      }));
+    }
+  } catch {
+    // No miner history yet.
+  }
+  return [];
 }
 
 function emptyLiveDashboard(): DashboardPayload {
@@ -423,6 +467,8 @@ function emptyLiveDashboard(): DashboardPayload {
       fee: 0,
     },
     chart: [],
+    chartSince: new Date().toISOString(),
+    minerCharts: [],
     workers: [],
     foundBlocks: [],
     network: {
@@ -455,10 +501,9 @@ export async function getDashboard(): Promise<DashboardPayload> {
     return emptyLiveDashboard();
   }
 
-  const [pool, chart, info, networkRaw, difficultyAdjustment, poolWorkers, devices] =
+  const [pool, info, networkRaw, difficultyAdjustment, poolWorkers, devices] =
     await Promise.all([
       fetchPool<LivePoolResponse>("/api/pool"),
-      fetchPool<ChartPoint[]>("/api/info/chart"),
       fetchPool<LiveInfoResponse>("/api/info"),
       fetchPool<LiveNetworkResponse>("/api/network").catch(() => null),
       loadDifficultyAdjustment(),
@@ -466,7 +511,13 @@ export async function getDashboard(): Promise<DashboardPayload> {
       loadDevices(),
     ]);
 
+  const chartSince = chartSinceIso(info);
+  const from = encodeURIComponent(chartSince);
+  let chart = await fetchPool<ChartPoint[]>(`/api/info/chart?from=${from}`).catch(() => []);
+  chart = appendLiveHashrate(chart, pool.totalHashRate);
+
   const workers = mergeWorkers(poolWorkers, devices);
+  const minerCharts = await loadMinerCharts(chartSince);
   const highScoreBest = Math.max(
     0,
     ...(info.highScores ?? []).map((row) => parseDifficulty(row.bestDifficulty)),
@@ -501,6 +552,8 @@ export async function getDashboard(): Promise<DashboardPayload> {
       fee: pool.fee ?? 0,
     },
     chart,
+    chartSince,
+    minerCharts,
     workers: workers.sort((a, b) => b.hashrate - a.hashrate),
     foundBlocks,
     network,

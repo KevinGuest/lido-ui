@@ -25,11 +25,12 @@ import { formatUptime, hashSuffix, numberSuffix, timeAgo } from "@/lib/format";
 import type { Worker } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
-type SortKey = "name" | "hashrate" | "bestDifficulty" | "uptime" | "blocks";
+type SortKey = "name" | "hashrate" | "shares" | "bestDifficulty" | "uptime" | "blocks";
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "name", label: "Name" },
   { key: "hashrate", label: "Hashrate" },
+  { key: "shares", label: "Shares" },
   { key: "bestDifficulty", label: "Best diff" },
   { key: "uptime", label: "Uptime" },
   { key: "blocks", label: "Blocks" },
@@ -39,6 +40,8 @@ function compareWorkers(a: Worker, b: Worker, sort: SortKey) {
   switch (sort) {
     case "hashrate":
       return b.hashrate - a.hashrate || a.name.localeCompare(b.name);
+    case "shares":
+      return b.shares - a.shares || a.name.localeCompare(b.name);
     case "bestDifficulty":
       return b.bestDifficulty - a.bestDifficulty || a.name.localeCompare(b.name);
     case "uptime":
@@ -144,6 +147,10 @@ function WorkerDialog({
     {
       label: "Hashrate",
       value: <DetailValue>{hashSuffix(worker.hashrate)}</DetailValue>,
+    },
+    {
+      label: "Shares",
+      value: <DetailValue>{worker.shares.toLocaleString()}</DetailValue>,
     },
     {
       label: "Best diff",
@@ -292,6 +299,7 @@ export function WorkersTable({
                 <TableHead>Name</TableHead>
                 <TableHead>Device</TableHead>
                 <TableHead className="text-right">Hashrate</TableHead>
+                <TableHead className="text-right">Shares</TableHead>
                 <TableHead className="text-right">Uptime</TableHead>
                 <TableHead className="text-right">Last seen</TableHead>
               </TableRow>
@@ -300,7 +308,7 @@ export function WorkersTable({
               {sorted.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="h-24 text-center text-sm text-muted-foreground"
                   >
                     No miner details yet. Open Connect to add miners — they show up here as they
@@ -320,6 +328,9 @@ export function WorkersTable({
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {hashSuffix(worker.hashrate)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {worker.shares.toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {worker.uptimeSeconds == null
