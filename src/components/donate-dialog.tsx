@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
 
+import { DialogMarquees } from "@/components/dialog-marquees";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -77,52 +78,54 @@ export function DonateDialog({
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-background shadow-xl">
-        <Card className="border-0 shadow-none">
-          <CardHeader>
-            <CardTitle>Donate</CardTitle>
-            <CardDescription>
-              Like the project? Consider a donation to Public Pool.
-            </CardDescription>
-            <CardAction>
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                aria-label="Close"
-                onClick={onClose}
-              >
-                <X />
-              </Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-8 sm:grid-cols-2">
-              <div className="flex flex-col items-center text-center">
-                <p className="mb-3 text-sm text-muted-foreground">Lightning</p>
-                <Image
-                  src="/qr-code-ln.svg"
-                  alt={LN_ADDRESS}
-                  width={200}
-                  height={200}
-                  className="size-[200px] rounded-lg bg-white p-2"
-                />
-                <CopyableAddress value={LN_ADDRESS} />
+      <div className="relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-border bg-background shadow-xl">
+        <DialogMarquees text="Spread the wealth" tone="donate">
+          <Card className="border-0 shadow-none">
+            <CardHeader>
+              <CardTitle>Donate</CardTitle>
+              <CardDescription>
+                Like the project? Consider a donation to Public Pool.
+              </CardDescription>
+              <CardAction>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Close"
+                  onClick={onClose}
+                >
+                  <X />
+                </Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-8 sm:grid-cols-2">
+                <div className="flex flex-col items-center text-center">
+                  <p className="mb-3 text-sm text-muted-foreground">Lightning</p>
+                  <Image
+                    src="/qr-code-ln.svg"
+                    alt={LN_ADDRESS}
+                    width={200}
+                    height={200}
+                    className="size-[200px] rounded-lg bg-white p-2"
+                  />
+                  <CopyableAddress value={LN_ADDRESS} />
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <p className="mb-3 text-sm text-muted-foreground">On-chain</p>
+                  <Image
+                    src="/qr-code-onchain.svg"
+                    alt={ONCHAIN_ADDRESS}
+                    width={200}
+                    height={200}
+                    className="size-[200px] rounded-lg bg-white p-2"
+                  />
+                  <CopyableAddress value={ONCHAIN_ADDRESS} />
+                </div>
               </div>
-              <div className="flex flex-col items-center text-center">
-                <p className="mb-3 text-sm text-muted-foreground">On-chain</p>
-                <Image
-                  src="/qr-code-onchain.svg"
-                  alt={ONCHAIN_ADDRESS}
-                  width={200}
-                  height={200}
-                  className="size-[200px] rounded-lg bg-white p-2"
-                />
-                <CopyableAddress value={ONCHAIN_ADDRESS} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </DialogMarquees>
       </div>
     </div>
   );

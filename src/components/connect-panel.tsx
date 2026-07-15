@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 
+import { DialogMarquees } from "@/components/dialog-marquees";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -78,33 +79,36 @@ export function ConnectDialog({
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl border border-border bg-background shadow-xl">
-        <Card className="border-0 shadow-none">
-          <CardHeader>
-            <CardTitle>Connect miners</CardTitle>
-            <CardDescription>
-              Point Bitaxe / NerdQAxe at Lido. Workers appear automatically once they submit shares.
-            </CardDescription>
-            <CardAction>
-              <Button
-                type="button"
-                size="icon-sm"
-                variant="ghost"
-                aria-label="Close"
-                onClick={onClose}
-              >
-                <X />
-              </Button>
-            </CardAction>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg border border-border px-3">
-              <CopyRow label="Stratum URL" value={stratumUrl} />
-              <CopyRow label="Username" value={usernameHint} />
-              <CopyRow label="Password" value="x" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-background shadow-xl">
+        <DialogMarquees text="Connect · Stratum · Point your rig" tone="connect">
+          <Card className="border-0 shadow-none">
+            <CardHeader>
+              <CardTitle>Connect miners</CardTitle>
+              <CardDescription>
+                Point Bitaxe / NerdQAxe at Lido. Workers appear automatically once they submit
+                shares.
+              </CardDescription>
+              <CardAction>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Close"
+                  onClick={onClose}
+                >
+                  <X />
+                </Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              <div className="rounded-lg border border-border px-3">
+                <CopyRow label="Stratum URL" value={stratumUrl} />
+                <CopyRow label="Username" value={usernameHint} />
+                <CopyRow label="Password" value="x" />
+              </div>
+            </CardContent>
+          </Card>
+        </DialogMarquees>
       </div>
     </div>
   );

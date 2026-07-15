@@ -126,3 +126,36 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+@keyframes lido-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes lido-marquee-reverse {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-lido-marquee {
+  animation: lido-marquee 28s linear infinite;
+}
+
+.animate-lido-marquee-reverse {
+  animation: lido-marquee-reverse 28s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-lido-marquee,
+  .animate-lido-marquee-reverse {
+    animation: none;
+  }
+}
