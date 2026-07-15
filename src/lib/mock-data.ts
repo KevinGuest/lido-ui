@@ -82,8 +82,8 @@ function hoursAgo(hours: number) {
   return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 }
 
-/** 24h × 30m buckets — used when the pool has no hashrate history yet. */
-export function buildZeroChart(hours = 24, intervalMinutes = 30): ChartPoint[] {
+/** Default empty chart: 24h × 10m buckets (matches Live window / pool slots). */
+export function buildZeroChart(hours = 24, intervalMinutes = 10): ChartPoint[] {
   const points: ChartPoint[] = [];
   const now = Date.now();
   const steps = Math.max(1, Math.round((hours * 60) / intervalMinutes));
@@ -97,7 +97,7 @@ export function buildZeroChart(hours = 24, intervalMinutes = 30): ChartPoint[] {
 }
 
 function buildMockChart(): ChartPoint[] {
-  return buildZeroChart(168, 60).map((point, index) => {
+  return buildZeroChart(24, 10).map((point, index) => {
     const base = 5.2e14;
     const wobble = Math.sin(index / 4) * 4e13 + Math.cos(index / 7) * 2e13;
     return {
@@ -118,7 +118,7 @@ export const mockDashboard: DashboardPayload = {
     fee: 0,
   },
   chart: buildMockChart(),
-  chartSince: hoursAgo(168),
+  chartSince: hoursAgo(24),
   network: {
     height: 902_184,
     nextHeight: 902_185,

@@ -2,7 +2,7 @@
 
 Next.js dashboard for Lido.
 
-**Live mockup (GitHub Pages demo only):** https://kevinguest.github.io/lido-ui/
+**Live mockup (GitHub Pages demo only):** https://lido.wtf/
 
 ## Dev
 

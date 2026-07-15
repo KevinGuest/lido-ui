@@ -146,7 +146,7 @@ function LiveIndicator() {
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
         <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
       </span>
-      <span>Live</span>
+      <span>Live · 24h</span>
     </span>
   );
 }
@@ -437,10 +437,14 @@ export function HashrateChart({
     to: endOfLocalDay(new Date()),
   }));
 
-  const liveWindow = React.useMemo(
-    () => clampWindow({ from: chartSince, to: new Date().toISOString() }, chartSince),
-    [chartSince],
-  );
+  const liveWindow = React.useMemo(() => {
+    const to = new Date();
+    const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
+    return clampWindow(
+      { from: from.toISOString(), to: to.toISOString() },
+      chartSince,
+    );
+  }, [chartSince]);
 
   const window = React.useMemo(() => {
     if (liveMode) return liveWindow;
@@ -500,9 +504,11 @@ export function HashrateChart({
               range={dateRange}
               onLive={() => {
                 setLiveMode(true);
+                const to = endOfLocalDay(new Date());
+                const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
                 setDateRange({
-                  from: startOfLocalDay(new Date(chartSince)),
-                  to: endOfLocalDay(new Date()),
+                  from: startOfLocalDay(from),
+                  to,
                 });
               }}
               onRangeChange={(next) => {

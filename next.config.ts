@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
   output: isPages ? "export" : "standalone",
   ...(isPages
     ? {
-        basePath: "/lido-ui",
+        // Custom domain (lido.wtf) serves at `/`. Keep basePath empty.
+        // Re-add `/lido-ui` only if publishing under username.github.io/lido-ui.
         images: { unoptimized: true },
         trailingSlash: true,
       }
