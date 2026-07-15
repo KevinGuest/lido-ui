@@ -79,7 +79,7 @@ export function DonateDialog({
         onClick={onClose}
       />
       <div className="relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border/50 bg-background shadow-xl">
-        <DialogMarquees text="Spread the wealth" tone="donate">
+        <DialogMarquees text="Support" tone="donate">
           <Card className="border-0 shadow-none">
             <CardHeader>
               <CardTitle>Donate</CardTitle>
