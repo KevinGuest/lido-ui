@@ -79,7 +79,7 @@ export function DonateDialog({
         onClick={onClose}
       />
       <div className="relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border/50 bg-background shadow-xl">
-        <DialogMarquees text="Support · Keep Lido running · Thank you" tone="donate">
+        <DialogMarquees text="Support · Keep Public Pool flowing · Thank you" tone="donate">
           <Card className="border-0 shadow-none">
             <CardHeader>
               <CardTitle>Donate</CardTitle>
