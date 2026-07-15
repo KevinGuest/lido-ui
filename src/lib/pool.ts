@@ -418,6 +418,12 @@ function mergeWorkers(poolWorkers: Worker[], devices: Worker[]): Worker[] {
 
 /** Prefer the freshest pool session when reconnects left duplicates. */
 function dedupeWorkersByName(workers: Worker[]): Worker[] {
+  const seenMs = (value: string | null) => {
+    if (!value) return 0;
+    const ts = new Date(value).getTime();
+    return Number.isFinite(ts) ? ts : 0;
+  };
+
   const byKey = new Map<string, Worker>();
   for (const worker of workers) {
     const key = `${worker.address}\0${worker.name}`.toLowerCase();
@@ -426,8 +432,8 @@ function dedupeWorkersByName(workers: Worker[]): Worker[] {
       byKey.set(key, worker);
       continue;
     }
-    const existingSeen = new Date(existing.lastSeen).getTime();
-    const nextSeen = new Date(worker.lastSeen).getTime();
+    const existingSeen = seenMs(existing.lastSeen);
+    const nextSeen = seenMs(worker.lastSeen);
     if (nextSeen >= existingSeen) {
       byKey.set(key, {
         ...worker,
