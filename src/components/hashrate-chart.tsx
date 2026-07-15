@@ -106,6 +106,20 @@ function formatTick(iso: string, spanMs: number) {
   });
 }
 
+/** Compact Y-axis label so values like "28.02 TH/s" don't clip. */
+function hashAxisTick(value: number): string {
+  if (!Number.isFinite(value) || value === 0) return "0";
+  const units = ["H", "KH", "MH", "GH", "TH", "PH", "EH", "ZH"];
+  let v = value;
+  let i = 0;
+  while (v >= 1000 && i < units.length - 1) {
+    v /= 1000;
+    i += 1;
+  }
+  const digits = v >= 100 ? 0 : v >= 10 ? 1 : 2;
+  return `${v.toFixed(digits)}${units[i]}`;
+}
+
 function formatTooltipLabel(iso: string) {
   return new Date(iso).toLocaleString([], {
     weekday: "short",
@@ -223,16 +237,16 @@ function TotalHashrateChart({ rows, flatZero }: { rows: ChartRow[]; flatZero: bo
 
   return (
     <ChartContainer config={totalChartConfig} className="aspect-auto h-64 w-full overflow-visible">
-      <AreaChart accessibilityLayer data={rows} margin={{ left: 0, right: 8, top: 20, bottom: 4 }}>
+      <AreaChart accessibilityLayer data={rows} margin={{ left: 12, right: 8, top: 20, bottom: 4 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
         <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
         <YAxis
           tickLine={false}
           axisLine={false}
-          width={56}
+          width={72}
           domain={flatZero ? [0, 1] : [0, "auto"]}
-          tickMargin={4}
-          tickFormatter={(value: number) => hashSuffix(value)}
+          tickMargin={8}
+          tickFormatter={(value: number) => hashAxisTick(value)}
         />
         <ChartTooltip
           content={
@@ -288,16 +302,16 @@ function MinersHashrateChart({
 
   return (
     <ChartContainer config={config} className="aspect-auto h-72 w-full overflow-visible">
-      <LineChart accessibilityLayer data={rows} margin={{ left: 0, right: 8, top: 20, bottom: 4 }}>
+      <LineChart accessibilityLayer data={rows} margin={{ left: 12, right: 8, top: 20, bottom: 4 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
         <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
         <YAxis
           tickLine={false}
           axisLine={false}
-          width={56}
+          width={72}
           domain={flatZero ? [0, 1] : [0, "auto"]}
-          tickMargin={4}
-          tickFormatter={(value: number) => hashSuffix(value)}
+          tickMargin={8}
+          tickFormatter={(value: number) => hashAxisTick(value)}
         />
         <ChartTooltip
           content={
