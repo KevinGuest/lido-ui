@@ -84,6 +84,12 @@ export function HalvingCountdown({
 }) {
   const [open, setOpen] = useState(false);
   const [pane, setPane] = useState<Pane>("about");
+  // Date.now() during SSR vs hydrate drifts by a minute — set after mount.
+  const [nowMs, setNowMs] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNowMs(Date.now());
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -105,8 +111,9 @@ export function HalvingCountdown({
   const epoch = Math.floor(height / HALVING_INTERVAL);
   const newSubsidy = INITIAL_SUBSIDY_BTC / 2 ** (epoch + 1);
   const blockMs = avgBlockMs > 0 ? avgBlockMs : TARGET_BLOCK_MS;
-  const etaMs = Date.now() + blocksRemaining * blockMs;
   const progress = Math.min(100, Math.max(0, (blocksIntoEpoch / HALVING_INTERVAL) * 100));
+  const etaLabel =
+    nowMs == null ? "—" : formatHalvingDate(nowMs + blocksRemaining * blockMs);
 
   function openModal(next: Pane = "about") {
     setPane(next);
@@ -146,8 +153,10 @@ export function HalvingCountdown({
           </div>
 
           <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <span className="tabular-nums">{blocksRemaining.toLocaleString()} blocks remaining</span>
-            <span className="tabular-nums">{formatHalvingDate(etaMs)}</span>
+            <span className="tabular-nums">
+              {blocksRemaining.toLocaleString("en-US")} blocks remaining
+            </span>
+            <span className="tabular-nums">{etaLabel}</span>
           </div>
         </CardContent>
       </Card>
