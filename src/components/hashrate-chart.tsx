@@ -511,10 +511,6 @@ function MinersHashrateChart({
         accessibilityLayer
         data={rows}
         margin={{ left: 12, right: 8, top: 20, bottom: 4 }}
-        onClick={(state) => {
-          // Click empty chart area clears focus.
-          if (!state?.activePayload?.length) setFocusedKey(null);
-        }}
       >
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
         <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
