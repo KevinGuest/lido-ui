@@ -3,7 +3,15 @@
 import * as React from "react";
 import { format } from "date-fns";
 import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import { Area, AreaChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { type DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -19,7 +27,6 @@ import {
 import {
   ChartContainer,
   ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
@@ -30,26 +37,20 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { hashSuffix } from "@/lib/format";
+import {
+  minerColor,
+  minerSeriesKey,
+  TOTAL_HASHRATE_COLOR,
+} from "@/lib/miner-colors";
 import type { ChartPoint, MinerChartSeries } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 const TOTAL_KEY = "total";
 
-const MINER_COLORS = [
-  "oklch(0.82 0.16 145)",
-  "oklch(0.78 0.14 220)",
-  "oklch(0.84 0.14 85)",
-  "oklch(0.78 0.16 25)",
-  "oklch(0.78 0.14 300)",
-  "oklch(0.82 0.12 180)",
-  "oklch(0.8 0.16 350)",
-  "oklch(0.86 0.08 95)",
-];
-
 const totalChartConfig = {
   hashrate: {
     label: "Hashrate",
-    color: "oklch(0.95 0 0)",
+    color: TOTAL_HASHRATE_COLOR,
   },
 } satisfies ChartConfig;
 
@@ -108,7 +109,6 @@ function formatTick(iso: string, spanMs: number) {
   });
 }
 
-/** Compact Y-axis label so values like "28.02 TH/s" don't clip. */
 function hashAxisTick(value: number): string {
   if (!Number.isFinite(value) || value === 0) return "0";
   const units = ["H", "KH", "MH", "GH", "TH", "PH", "EH", "ZH"];
@@ -141,24 +141,16 @@ function windowLabel(window: TimeWindow) {
   return `${format(from, "LLL dd, y")} – ${format(to, "LLL dd, y")}`;
 }
 
-function LiveIndicator() {
+function LiveIndicator({ label = "Live · 24h" }: { label?: string }) {
   return (
     <span className="inline-flex items-center gap-2">
       <span className="relative flex size-2 shrink-0">
         <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75" />
         <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
       </span>
-      <span>Live · 24h</span>
+      <span>{label}</span>
     </span>
   );
-}
-
-function seriesKey(name: string, index: number) {
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, "");
-  return `m_${slug || "miner"}_${index}`;
 }
 
 function prepareTotalRows(
@@ -178,6 +170,69 @@ function prepareTotalRows(
   };
 }
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const WEEK_BUCKET_MS = 10 * 60 * 1000;
+
+const weekCompareConfig = {
+  thisWeek: {
+    label: "This week",
+    color: TOTAL_HASHRATE_COLOR,
+  },
+  lastWeek: {
+    label: "Last week",
+    color: "oklch(0.72 0.1 250)",
+  },
+} satisfies ChartConfig;
+
+/** Align this week vs prior week on the same x-axis (offset within the week). */
+function prepareWeekCompareRows(
+  data: ChartPoint[],
+  endMs: number,
+  chartSince: string,
+): { rows: ChartRow[]; flatZero: boolean } {
+  const sinceMs = new Date(chartSince).getTime();
+  const thisFrom = Math.max(sinceMs, endMs - WEEK_MS);
+  const lastFrom = Math.max(sinceMs, endMs - 2 * WEEK_MS);
+  const lastTo = endMs - WEEK_MS;
+
+  const thisMap = new Map<number, number>();
+  const lastMap = new Map<number, number>();
+
+  for (const point of data) {
+    const ts = new Date(point.label).getTime();
+    if (!Number.isFinite(ts)) continue;
+    const value = Number(point.data) || 0;
+    if (ts >= thisFrom && ts <= endMs) {
+      const bucket = Math.floor((ts - thisFrom) / WEEK_BUCKET_MS);
+      thisMap.set(bucket, value);
+    } else if (ts >= lastFrom && ts < lastTo) {
+      const bucket = Math.floor((ts - lastFrom) / WEEK_BUCKET_MS);
+      lastMap.set(bucket, value);
+    }
+  }
+
+  const buckets = new Set<number>([...thisMap.keys(), ...lastMap.keys()]);
+  const sorted = Array.from(buckets).sort((a, b) => a - b);
+  const spanMs = WEEK_MS;
+
+  const rows: ChartRow[] = sorted.map((bucket) => {
+    const iso = new Date(thisFrom + bucket * WEEK_BUCKET_MS).toISOString();
+    return {
+      time: formatTick(iso, spanMs),
+      iso,
+      thisWeek: thisMap.get(bucket) ?? 0,
+      lastWeek: lastMap.get(bucket) ?? 0,
+    };
+  });
+
+  return {
+    rows,
+    flatZero:
+      rows.length === 0 ||
+      rows.every((row) => (Number(row.thisWeek) || 0) === 0 && (Number(row.lastWeek) || 0) === 0),
+  };
+}
+
 function prepareMinerOverlayRows(
   totalData: ChartPoint[],
   miners: MinerChartSeries[],
@@ -188,7 +243,7 @@ function prepareMinerOverlayRows(
   const config: ChartConfig = {
     [TOTAL_KEY]: {
       label: "Total",
-      color: "oklch(0.95 0 0)",
+      color: TOTAL_HASHRATE_COLOR,
     },
   };
   const byKey = new Map<string, Map<number, number>>();
@@ -201,12 +256,15 @@ function prepareMinerOverlayRows(
   }
   byKey.set(TOTAL_KEY, totalMap);
 
-  miners.forEach((miner, index) => {
-    const key = seriesKey(miner.name, index);
+  const usedKeys = new Set<string>([TOTAL_KEY]);
+  miners.forEach((miner) => {
+    let key = minerSeriesKey(miner.name);
+    if (usedKeys.has(key)) key = `${key}_${usedKeys.size}`;
+    usedKeys.add(key);
     keys.push(key);
     config[key] = {
       label: miner.name,
-      color: MINER_COLORS[index % MINER_COLORS.length],
+      color: minerColor(miner.name),
     };
     const map = new Map<number, number>();
     for (const point of filterByWindow(miner.chart, window)) {
@@ -242,7 +300,13 @@ function prepareMinerOverlayRows(
   };
 }
 
-function TotalHashrateChart({ rows, flatZero }: { rows: ChartRow[]; flatZero: boolean }) {
+function TotalHashrateChart({
+  rows,
+  flatZero,
+}: {
+  rows: ChartRow[];
+  flatZero: boolean;
+}) {
   if (rows.length === 0) {
     return (
       <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
@@ -265,6 +329,7 @@ function TotalHashrateChart({ rows, flatZero }: { rows: ChartRow[]; flatZero: bo
           tickFormatter={(value: number) => hashAxisTick(value)}
         />
         <ChartTooltip
+          cursor={false}
           content={
             <ChartTooltipContent
               indicator="dot"
@@ -289,6 +354,127 @@ function TotalHashrateChart({ rows, flatZero }: { rows: ChartRow[]; flatZero: bo
   );
 }
 
+function WeekCompareChart({ rows, flatZero }: { rows: ChartRow[]; flatZero: boolean }) {
+  if (rows.length === 0) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+        Need about two weeks of share history to compare weeks.
+      </div>
+    );
+  }
+
+  return (
+    <ChartContainer config={weekCompareConfig} className="aspect-auto h-64 w-full overflow-visible">
+      <AreaChart accessibilityLayer data={rows} margin={{ left: 12, right: 8, top: 20, bottom: 4 }}>
+        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
+        <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          width={72}
+          domain={flatZero ? [0, 1] : [0, "auto"]}
+          tickMargin={8}
+          tickFormatter={(value: number) => hashAxisTick(value)}
+        />
+        <ChartTooltip
+          cursor={false}
+          content={
+            <ChartTooltipContent
+              indicator="dot"
+              labelFormatter={(_, items) => {
+                const iso = items?.[0]?.payload?.iso as string | undefined;
+                return iso ? formatTooltipLabel(iso) : "";
+              }}
+              formatter={(value) => hashSuffix(Number(value))}
+            />
+          }
+        />
+        <ChartLegend
+          content={() => (
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
+              {(["thisWeek", "lastWeek"] as const).map((key) => (
+                <span key={key} className="inline-flex items-center gap-1.5 text-xs">
+                  <span
+                    className="size-2 shrink-0 rounded-[2px]"
+                    style={{ backgroundColor: weekCompareConfig[key].color }}
+                  />
+                  {weekCompareConfig[key].label}
+                </span>
+              ))}
+            </div>
+          )}
+        />
+        <defs>
+          <linearGradient id="fillThisWeek" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-thisWeek)" stopOpacity={0.85} />
+            <stop offset="95%" stopColor="var(--color-thisWeek)" stopOpacity={0.08} />
+          </linearGradient>
+          <linearGradient id="fillLastWeek" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="var(--color-lastWeek)" stopOpacity={0.7} />
+            <stop offset="95%" stopColor="var(--color-lastWeek)" stopOpacity={0.06} />
+          </linearGradient>
+        </defs>
+        <Area
+          type="natural"
+          dataKey="lastWeek"
+          stroke="var(--color-lastWeek)"
+          fill="url(#fillLastWeek)"
+          fillOpacity={0.4}
+          strokeWidth={2}
+        />
+        <Area
+          type="natural"
+          dataKey="thisWeek"
+          stroke="var(--color-thisWeek)"
+          fill="url(#fillThisWeek)"
+          fillOpacity={0.45}
+          strokeWidth={2.5}
+        />
+      </AreaChart>
+    </ChartContainer>
+  );
+}
+
+function FocusLegend({
+  config,
+  keys,
+  focusedKey,
+  onFocus,
+}: {
+  config: ChartConfig;
+  keys: string[];
+  focusedKey: string | null;
+  onFocus: (key: string | null) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
+      {keys.map((key) => {
+        const item = config[key];
+        const active = focusedKey == null || focusedKey === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onFocus(focusedKey === key ? null : key)}
+            className={cn(
+              "inline-flex items-center gap-1.5 text-xs transition-opacity",
+              active ? "opacity-100" : "opacity-35",
+            )}
+          >
+            <span
+              className="size-2 shrink-0 rounded-[2px]"
+              style={{ backgroundColor: item?.color }}
+            />
+            <span className={cn(focusedKey === key && "font-medium text-foreground")}>
+              {item?.label ?? key}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function MinersHashrateChart({
   rows,
   keys,
@@ -300,6 +486,7 @@ function MinersHashrateChart({
   config: ChartConfig;
   flatZero: boolean;
 }) {
+  const [focusedKey, setFocusedKey] = React.useState<string | null>(null);
   const minerKeys = keys.filter((key) => key !== TOTAL_KEY);
 
   if (minerKeys.length === 0) {
@@ -320,7 +507,15 @@ function MinersHashrateChart({
 
   return (
     <ChartContainer config={config} className="aspect-auto h-72 w-full overflow-visible">
-      <LineChart accessibilityLayer data={rows} margin={{ left: 12, right: 8, top: 20, bottom: 4 }}>
+      <ComposedChart
+        accessibilityLayer
+        data={rows}
+        margin={{ left: 12, right: 8, top: 20, bottom: 4 }}
+        onClick={(state) => {
+          // Click empty chart area clears focus.
+          if (!state?.activePayload?.length) setFocusedKey(null);
+        }}
+      >
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
         <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
         <YAxis
@@ -332,35 +527,84 @@ function MinersHashrateChart({
           tickFormatter={(value: number) => hashAxisTick(value)}
         />
         <ChartTooltip
+          content={({ active, payload, label }) => {
+            const filtered =
+              focusedKey == null
+                ? payload
+                : payload?.filter((item) => item.dataKey === focusedKey);
+            return (
+              <ChartTooltipContent
+                active={active}
+                payload={filtered}
+                label={label}
+                indicator="dot"
+                labelFormatter={(_, items) => {
+                  const iso = items?.[0]?.payload?.iso as string | undefined;
+                  return iso ? formatTooltipLabel(iso) : "";
+                }}
+                formatter={(value) => hashSuffix(Number(value))}
+              />
+            );
+          }}
+        />
+        <ChartLegend
           content={
-            <ChartTooltipContent
-              indicator="dot"
-              labelFormatter={(_, items) => {
-                const iso = items?.[0]?.payload?.iso as string | undefined;
-                return iso ? formatTooltipLabel(iso) : "";
-              }}
-              formatter={(value) => hashSuffix(Number(value))}
+            <FocusLegend
+              config={config}
+              keys={keys}
+              focusedKey={focusedKey}
+              onFocus={setFocusedKey}
             />
           }
         />
-        <ChartLegend content={<ChartLegendContent />} />
+        {focusedKey ? (
+          <defs>
+            <linearGradient id={`fill-${focusedKey}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={`var(--color-${focusedKey})`} stopOpacity={0.85} />
+              <stop offset="95%" stopColor={`var(--color-${focusedKey})`} stopOpacity={0.08} />
+            </linearGradient>
+          </defs>
+        ) : null}
         {keys.map((key) => {
           const isTotal = key === TOTAL_KEY;
+          const isFocused = focusedKey === key;
+          const dimmed = focusedKey != null && !isFocused;
+
+          if (isFocused) {
+            return (
+              <Area
+                key={key}
+                type="natural"
+                dataKey={key}
+                stroke={`var(--color-${key})`}
+                fill={`url(#fill-${key})`}
+                fillOpacity={0.45}
+                strokeWidth={2.75}
+                strokeDasharray={isTotal ? "6 4" : undefined}
+                activeDot={{ r: 4 }}
+                onClick={() => setFocusedKey(null)}
+                style={{ cursor: "pointer" }}
+              />
+            );
+          }
+
           return (
             <Line
               key={key}
               type="monotone"
               dataKey={key}
               stroke={`var(--color-${key})`}
-              strokeWidth={isTotal ? 2.75 : 2}
-              strokeOpacity={isTotal ? 0.95 : 0.9}
+              strokeWidth={isTotal ? 2.5 : 2}
+              strokeOpacity={dimmed ? 0.22 : isTotal ? 0.95 : 0.9}
               strokeDasharray={isTotal ? "6 4" : undefined}
               dot={false}
-              activeDot={{ r: 3 }}
+              activeDot={dimmed ? false : { r: 3 }}
+              onClick={() => setFocusedKey(key)}
+              style={{ cursor: "pointer" }}
             />
           );
         })}
-      </LineChart>
+      </ComposedChart>
     </ChartContainer>
   );
 }
@@ -460,7 +704,7 @@ export function HashrateChart({
     to: endOfLocalDay(new Date()),
   }));
 
-  const liveWindow = React.useMemo(() => {
+  const liveDayWindow = React.useMemo(() => {
     const to = new Date();
     const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
     return clampWindow(
@@ -469,21 +713,32 @@ export function HashrateChart({
     );
   }, [chartSince]);
 
-  const window = React.useMemo(() => {
-    if (liveMode) return liveWindow;
-    if (!dateRange?.from) return liveWindow;
+  const customWindow = React.useMemo(() => {
+    if (!dateRange?.from) return liveDayWindow;
     const from = startOfLocalDay(dateRange.from).toISOString();
     const to = endOfLocalDay(dateRange.to ?? dateRange.from).toISOString();
     return clampWindow({ from, to }, chartSince);
-  }, [liveMode, liveWindow, dateRange, chartSince]);
+  }, [dateRange, chartSince, liveDayWindow]);
 
   const pages = [
     { key: "total", title: "Total hashrate" },
+    { key: "week", title: "Weekly compare" },
     { key: "miners", title: "Miner hashrate" },
   ] as const;
 
   const page = pages[Math.min(pageIndex, pages.length - 1)];
+
+  const window = React.useMemo(() => {
+    if (!liveMode) return customWindow;
+    return liveDayWindow;
+  }, [liveMode, customWindow, liveDayWindow]);
+
+  const weekEndMs = liveMode
+    ? Date.now()
+    : new Date(customWindow.to).getTime();
+
   const total = prepareTotalRows(data, window);
+  const weekCompare = prepareWeekCompareRows(data, weekEndMs, chartSince);
   const minerView = prepareMinerOverlayRows(data, minerCharts, window);
   const hasLiveHashrate = liveHashrate > 0;
 
@@ -492,7 +747,17 @@ export function HashrateChart({
       <CardHeader>
         <CardTitle>{page.title}</CardTitle>
         <CardDescription>
-          {liveMode ? <LiveIndicator /> : windowLabel(window)}
+          {page.key === "week" ? (
+            liveMode ? (
+              <LiveIndicator label="This week vs last week" />
+            ) : (
+              "Selected end · prior 7 days vs 7 days before"
+            )
+          ) : liveMode ? (
+            <LiveIndicator label="Live · 24h" />
+          ) : (
+            windowLabel(window)
+          )}
         </CardDescription>
         <CardAction>
           <div className="flex flex-wrap items-center justify-end gap-1.5">
@@ -503,7 +768,7 @@ export function HashrateChart({
                 size="icon-sm"
                 aria-label="Previous chart"
                 disabled={pageIndex === 0}
-                onClick={() => setPageIndex(0)}
+                onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
               >
                 <ChevronLeft />
               </Button>
@@ -516,7 +781,7 @@ export function HashrateChart({
                 size="icon-sm"
                 aria-label="Next chart"
                 disabled={pageIndex === pages.length - 1}
-                onClick={() => setPageIndex(1)}
+                onClick={() => setPageIndex((i) => Math.min(pages.length - 1, i + 1))}
               >
                 <ChevronRight />
               </Button>
@@ -545,6 +810,8 @@ export function HashrateChart({
       <CardContent>
         {page.key === "total" ? (
           <TotalHashrateChart rows={total.rows} flatZero={total.flatZero && !hasLiveHashrate} />
+        ) : page.key === "week" ? (
+          <WeekCompareChart rows={weekCompare.rows} flatZero={weekCompare.flatZero} />
         ) : (
           <MinersHashrateChart
             rows={minerView.rows}

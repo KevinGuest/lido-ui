@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatUptime, hashSuffix, numberSuffix, timeAgo } from "@/lib/format";
+import { minerColor } from "@/lib/miner-colors";
 import type { Worker } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -313,7 +314,16 @@ export function WorkersTable({
                     className="cursor-pointer"
                     onClick={() => setSelectedId(worker.id)}
                   >
-                    <TableCell className="font-medium">{worker.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className="size-2.5 shrink-0 rounded-[2px]"
+                          style={{ backgroundColor: minerColor(worker.name) }}
+                          aria-hidden
+                        />
+                        {worker.name}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {worker.userAgent || "n/a"}
                     </TableCell>
