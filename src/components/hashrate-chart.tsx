@@ -7,8 +7,8 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  ComposedChart,
   Line,
+  LineChart,
   XAxis,
   YAxis,
 } from "recharts";
@@ -27,6 +27,7 @@ import {
 import {
   ChartContainer,
   ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
@@ -435,46 +436,6 @@ function WeekCompareChart({ rows, flatZero }: { rows: ChartRow[]; flatZero: bool
   );
 }
 
-function FocusLegend({
-  config,
-  keys,
-  focusedKey,
-  onFocus,
-}: {
-  config: ChartConfig;
-  keys: string[];
-  focusedKey: string | null;
-  onFocus: (key: string | null) => void;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
-      {keys.map((key) => {
-        const item = config[key];
-        const active = focusedKey == null || focusedKey === key;
-        return (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onFocus(focusedKey === key ? null : key)}
-            className={cn(
-              "inline-flex items-center gap-1.5 text-xs transition-opacity",
-              active ? "opacity-100" : "opacity-35",
-            )}
-          >
-            <span
-              className="size-2 shrink-0 rounded-[2px]"
-              style={{ backgroundColor: item?.color }}
-            />
-            <span className={cn(focusedKey === key && "font-medium text-foreground")}>
-              {item?.label ?? key}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function MinersHashrateChart({
   rows,
   keys,
@@ -486,7 +447,6 @@ function MinersHashrateChart({
   config: ChartConfig;
   flatZero: boolean;
 }) {
-  const [focusedKey, setFocusedKey] = React.useState<string | null>(null);
   const minerKeys = keys.filter((key) => key !== TOTAL_KEY);
 
   if (minerKeys.length === 0) {
@@ -507,11 +467,7 @@ function MinersHashrateChart({
 
   return (
     <ChartContainer config={config} className="aspect-auto h-72 w-full overflow-visible">
-      <ComposedChart
-        accessibilityLayer
-        data={rows}
-        margin={{ left: 12, right: 8, top: 20, bottom: 4 }}
-      >
+      <LineChart accessibilityLayer data={rows} margin={{ left: 12, right: 8, top: 20, bottom: 4 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
         <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
         <YAxis
@@ -523,67 +479,20 @@ function MinersHashrateChart({
           tickFormatter={(value: number) => hashAxisTick(value)}
         />
         <ChartTooltip
-          content={({ active, payload, label }) => {
-            const filtered =
-              focusedKey == null
-                ? payload
-                : payload?.filter((item) => item.dataKey === focusedKey);
-            return (
-              <ChartTooltipContent
-                active={active}
-                payload={filtered}
-                label={label}
-                indicator="dot"
-                labelFormatter={(_, items) => {
-                  const iso = items?.[0]?.payload?.iso as string | undefined;
-                  return iso ? formatTooltipLabel(iso) : "";
-                }}
-                formatter={(value) => hashSuffix(Number(value))}
-              />
-            );
-          }}
-        />
-        <ChartLegend
           content={
-            <FocusLegend
-              config={config}
-              keys={keys}
-              focusedKey={focusedKey}
-              onFocus={setFocusedKey}
+            <ChartTooltipContent
+              indicator="dot"
+              labelFormatter={(_, items) => {
+                const iso = items?.[0]?.payload?.iso as string | undefined;
+                return iso ? formatTooltipLabel(iso) : "";
+              }}
+              formatter={(value) => hashSuffix(Number(value))}
             />
           }
         />
-        {focusedKey ? (
-          <defs>
-            <linearGradient id={`fill-${focusedKey}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={`var(--color-${focusedKey})`} stopOpacity={0.85} />
-              <stop offset="95%" stopColor={`var(--color-${focusedKey})`} stopOpacity={0.08} />
-            </linearGradient>
-          </defs>
-        ) : null}
+        <ChartLegend content={<ChartLegendContent />} />
         {keys.map((key) => {
           const isTotal = key === TOTAL_KEY;
-          const isFocused = focusedKey === key;
-          const dimmed = focusedKey != null && !isFocused;
-
-          if (isFocused) {
-            return (
-              <Area
-                key={key}
-                type="natural"
-                dataKey={key}
-                stroke={`var(--color-${key})`}
-                fill={`url(#fill-${key})`}
-                fillOpacity={0.45}
-                strokeWidth={2.75}
-                strokeDasharray={isTotal ? "6 4" : undefined}
-                activeDot={{ r: 4 }}
-                onClick={() => setFocusedKey(null)}
-                style={{ cursor: "pointer" }}
-              />
-            );
-          }
-
           return (
             <Line
               key={key}
@@ -591,16 +500,14 @@ function MinersHashrateChart({
               dataKey={key}
               stroke={`var(--color-${key})`}
               strokeWidth={isTotal ? 2.5 : 2}
-              strokeOpacity={dimmed ? 0.22 : isTotal ? 0.95 : 0.9}
+              strokeOpacity={isTotal ? 0.95 : 0.9}
               strokeDasharray={isTotal ? "6 4" : undefined}
               dot={false}
-              activeDot={dimmed ? false : { r: 3 }}
-              onClick={() => setFocusedKey(key)}
-              style={{ cursor: "pointer" }}
+              activeDot={{ r: 3 }}
             />
           );
         })}
-      </ComposedChart>
+      </LineChart>
     </ChartContainer>
   );
 }
