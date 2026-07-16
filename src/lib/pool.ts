@@ -124,7 +124,10 @@ type AxeSwarmInfo = {
 };
 
 type LiveInfoResponse = {
+  /** Process boot time (Uptime card). */
   uptime?: string | Date;
+  /** First pool start — persists across restarts for chart date range. */
+  startedAt?: string | Date;
   highScores?: Array<{
     bestDifficulty?: number | string;
     bestDifficultyUserAgent?: string;
@@ -464,8 +467,9 @@ function appendLiveHashrate(chart: ChartPoint[], liveHashrate: number): ChartPoi
 }
 
 function chartSinceIso(info: LiveInfoResponse): string {
-  if (info.uptime) {
-    const started = new Date(info.uptime as string | Date).getTime();
+  const raw = info.startedAt ?? info.uptime;
+  if (raw) {
+    const started = new Date(raw as string | Date).getTime();
     if (Number.isFinite(started)) return new Date(started).toISOString();
   }
   return new Date().toISOString();

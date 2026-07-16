@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Area, AreaChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { type DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -46,9 +46,17 @@ const MINER_COLORS = [
   "oklch(0.86 0.08 95)",
 ];
 
+const totalChartConfig = {
+  hashrate: {
+    label: "Hashrate",
+    color: "oklch(0.95 0 0)",
+  },
+} satisfies ChartConfig;
+
 type ChartRow = {
   time: string;
   iso: string;
+  hashrate?: number;
   [seriesKey: string]: string | number | undefined;
 };
 
@@ -153,7 +161,24 @@ function seriesKey(name: string, index: number) {
   return `m_${slug || "miner"}_${index}`;
 }
 
-function prepareChartRows(
+function prepareTotalRows(
+  data: ChartPoint[],
+  window: TimeWindow,
+): { rows: ChartRow[]; flatZero: boolean } {
+  const filtered = filterByWindow(data, window);
+  const spanMs = new Date(window.to).getTime() - new Date(window.from).getTime();
+  const rows = filtered.map((point) => ({
+    time: formatTick(point.label, spanMs),
+    iso: point.label,
+    hashrate: Number(point.data) || 0,
+  }));
+  return {
+    rows,
+    flatZero: rows.length === 0 || rows.every((row) => (row.hashrate ?? 0) === 0),
+  };
+}
+
+function prepareMinerOverlayRows(
   totalData: ChartPoint[],
   miners: MinerChartSeries[],
   window: TimeWindow,
@@ -217,7 +242,54 @@ function prepareChartRows(
   };
 }
 
-function HashrateOverlayChart({
+function TotalHashrateChart({ rows, flatZero }: { rows: ChartRow[]; flatZero: boolean }) {
+  if (rows.length === 0) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+        Waiting for hashrate — chart starts when miners submit shares.
+      </div>
+    );
+  }
+
+  return (
+    <ChartContainer config={totalChartConfig} className="aspect-auto h-64 w-full overflow-visible">
+      <AreaChart accessibilityLayer data={rows} margin={{ left: 12, right: 8, top: 20, bottom: 4 }}>
+        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
+        <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
+        <YAxis
+          tickLine={false}
+          axisLine={false}
+          width={72}
+          domain={flatZero ? [0, 1] : [0, "auto"]}
+          tickMargin={8}
+          tickFormatter={(value: number) => hashAxisTick(value)}
+        />
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              indicator="dot"
+              labelFormatter={(_, items) => {
+                const iso = items?.[0]?.payload?.iso as string | undefined;
+                return iso ? formatTooltipLabel(iso) : "";
+              }}
+              formatter={(value) => hashSuffix(Number(value))}
+            />
+          }
+        />
+        <Area
+          type="monotone"
+          dataKey="hashrate"
+          stroke="var(--color-hashrate)"
+          fill="var(--color-hashrate)"
+          fillOpacity={0.28}
+          strokeWidth={2.5}
+        />
+      </AreaChart>
+    </ChartContainer>
+  );
+}
+
+function MinersHashrateChart({
   rows,
   keys,
   config,
@@ -228,10 +300,20 @@ function HashrateOverlayChart({
   config: ChartConfig;
   flatZero: boolean;
 }) {
+  const minerKeys = keys.filter((key) => key !== TOTAL_KEY);
+
+  if (minerKeys.length === 0) {
+    return (
+      <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+        Connect miners to see per-worker hashrate.
+      </div>
+    );
+  }
+
   if (rows.length === 0) {
     return (
       <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
-        Waiting for hashrate — chart starts when miners submit shares.
+        No miner history in this time range yet.
       </div>
     );
   }
@@ -371,6 +453,7 @@ export function HashrateChart({
   chartSince: string;
   liveHashrate?: number;
 }) {
+  const [pageIndex, setPageIndex] = React.useState(0);
   const [liveMode, setLiveMode] = React.useState(true);
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(() => ({
     from: startOfLocalDay(new Date(chartSince)),
@@ -394,44 +477,82 @@ export function HashrateChart({
     return clampWindow({ from, to }, chartSince);
   }, [liveMode, liveWindow, dateRange, chartSince]);
 
-  const view = prepareChartRows(data, minerCharts, window);
+  const pages = [
+    { key: "total", title: "Total hashrate" },
+    { key: "miners", title: "Miner hashrate" },
+  ] as const;
+
+  const page = pages[Math.min(pageIndex, pages.length - 1)];
+  const total = prepareTotalRows(data, window);
+  const minerView = prepareMinerOverlayRows(data, minerCharts, window);
   const hasLiveHashrate = liveHashrate > 0;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Hashrate</CardTitle>
+        <CardTitle>{page.title}</CardTitle>
         <CardDescription>
           {liveMode ? <LiveIndicator /> : windowLabel(window)}
         </CardDescription>
         <CardAction>
-          <ChartDateRangePicker
-            chartSince={chartSince}
-            liveMode={liveMode}
-            range={dateRange}
-            onLive={() => {
-              setLiveMode(true);
-              const to = endOfLocalDay(new Date());
-              const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
-              setDateRange({
-                from: startOfLocalDay(from),
-                to,
-              });
-            }}
-            onRangeChange={(next) => {
-              setDateRange(next);
-              if (next?.from) setLiveMode(false);
-            }}
-          />
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Previous chart"
+                disabled={pageIndex === 0}
+                onClick={() => setPageIndex(0)}
+              >
+                <ChevronLeft />
+              </Button>
+              <span className="min-w-[5.5rem] text-center text-xs tabular-nums text-muted-foreground">
+                {pageIndex + 1} / {pages.length}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Next chart"
+                disabled={pageIndex === pages.length - 1}
+                onClick={() => setPageIndex(1)}
+              >
+                <ChevronRight />
+              </Button>
+            </div>
+            <ChartDateRangePicker
+              chartSince={chartSince}
+              liveMode={liveMode}
+              range={dateRange}
+              onLive={() => {
+                setLiveMode(true);
+                const to = endOfLocalDay(new Date());
+                const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
+                setDateRange({
+                  from: startOfLocalDay(from),
+                  to,
+                });
+              }}
+              onRangeChange={(next) => {
+                setDateRange(next);
+                if (next?.from) setLiveMode(false);
+              }}
+            />
+          </div>
         </CardAction>
       </CardHeader>
       <CardContent>
-        <HashrateOverlayChart
-          rows={view.rows}
-          keys={view.keys}
-          config={view.config}
-          flatZero={view.flatZero && !hasLiveHashrate}
-        />
+        {page.key === "total" ? (
+          <TotalHashrateChart rows={total.rows} flatZero={total.flatZero && !hasLiveHashrate} />
+        ) : (
+          <MinersHashrateChart
+            rows={minerView.rows}
+            keys={minerView.keys}
+            config={minerView.config}
+            flatZero={minerView.flatZero}
+          />
+        )}
       </CardContent>
     </Card>
   );

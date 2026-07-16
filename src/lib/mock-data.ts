@@ -97,7 +97,7 @@ export function buildZeroChart(hours = 24, intervalMinutes = 10): ChartPoint[] {
 }
 
 function buildMockChart(): ChartPoint[] {
-  return buildZeroChart(24, 10).map((point, index) => {
+  return buildZeroChart(168, 10).map((point, index) => {
     const base = 5.2e14;
     const wobble = Math.sin(index / 4) * 4e13 + Math.cos(index / 7) * 2e13;
     return {
@@ -118,7 +118,7 @@ export const mockDashboard: DashboardPayload = {
     fee: 0,
   },
   chart: buildMockChart(),
-  chartSince: hoursAgo(24),
+  chartSince: hoursAgo(168),
   network: {
     height: 902_184,
     nextHeight: 902_185,
@@ -140,7 +140,7 @@ export const mockDashboard: DashboardPayload = {
     timeAvgMs: 585_000,
     expectedBlocks: 820,
   },
-  uptimeSeconds: 86_400 * 3 + 5 * 3600,
+  uptimeSeconds: 86_400 * 7,
   foundBlocks: [
     {
       height: 901_002,
