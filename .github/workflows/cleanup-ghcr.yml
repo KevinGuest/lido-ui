@@ -1,0 +1,32 @@
+name: Cleanup GHCR versions
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete all lido-ui container package versions
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          PACKAGE: lido-ui
+        run: |
+          set -euo pipefail
+          ids="$(gh api "/users/${OWNER}/packages/container/${PACKAGE}/versions?per_page=100" --paginate -q '.[].id')"
+          if [ -z "${ids}" ]; then
+            echo "No package versions to delete."
+            exit 0
+          fi
+          count=0
+          for id in ${ids}; do
+            echo "Deleting version id ${id}..."
+            gh api -X DELETE "/users/${OWNER}/packages/container/${PACKAGE}/versions/${id}"
+            count=$((count + 1))
+          done
+          echo "Deleted ${count} version(s)."
