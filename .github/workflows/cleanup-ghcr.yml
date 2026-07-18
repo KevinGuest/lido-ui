@@ -17,16 +17,21 @@ jobs:
           OWNER: ${{ github.repository_owner }}
           PACKAGE: lido-ui
         run: |
-          set -euo pipefail
+          set -uo pipefail
           ids="$(gh api "/users/${OWNER}/packages/container/${PACKAGE}/versions?per_page=100" --paginate -q '.[].id')"
           if [ -z "${ids}" ]; then
             echo "No package versions to delete."
             exit 0
           fi
-          count=0
+          deleted=0
+          skipped=0
           for id in ${ids}; do
             echo "Deleting version id ${id}..."
-            gh api -X DELETE "/users/${OWNER}/packages/container/${PACKAGE}/versions/${id}"
-            count=$((count + 1))
+            if gh api -X DELETE "/users/${OWNER}/packages/container/${PACKAGE}/versions/${id}"; then
+              deleted=$((deleted + 1))
+            else
+              echo "Skipped version id ${id} (protected or already removed)."
+              skipped=$((skipped + 1))
+            fi
           done
-          echo "Deleted ${count} version(s)."
+          echo "Deleted ${deleted} version(s), skipped ${skipped}."
