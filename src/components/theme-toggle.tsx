@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { THEME_STORAGE_KEY } from "@/components/theme-init";
 
-const STORAGE_KEY = "lido-theme";
+const STORAGE_KEY = THEME_STORAGE_KEY;
 
 export function ThemeToggle() {
   const [dark, setDark] = useState(true);

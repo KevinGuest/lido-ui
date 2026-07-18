@@ -81,6 +81,33 @@ export type DashboardPayload = {
 const DEMO_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
 const CHART_HOURS = 168;
 const CHART_INTERVAL_MINUTES = 10;
+/** Pool high score shown on the demo dashboard (~4.20T). */
+const DEMO_BEST_DIFFICULTY = 4.2e12;
+
+function hashrateWobbleMultiplier(phase: number, timeMs: number): number {
+  const t = timeMs / 1000;
+  return (
+    1 +
+    0.045 * Math.sin(t / 47 + phase) +
+    0.025 * Math.sin(t / 113 + phase * 1.4) +
+    0.015 * Math.cos(t / 271 + phase * 0.8)
+  );
+}
+
+/** Slow drift for chart history — keeps stacked areas readable. */
+function chartWobbleMultiplier(phase: number, timeMs: number): number {
+  const t = timeMs / 1000;
+  return (
+    1 +
+    0.04 * Math.sin(t / 5400 + phase) +
+    0.025 * Math.sin(t / 11_000 + phase * 1.3) +
+    0.015 * Math.cos(t / 18_000 + phase * 0.7)
+  );
+}
+
+function fluctuateHashrate(base: number, phase: number, now = Date.now()): number {
+  return Math.max(0, base * hashrateWobbleMultiplier(phase, now));
+}
 
 type MockMinerSeed = {
   id: string;
@@ -203,27 +230,27 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
   },
   {
     id: "9",
-    name: "apollo-ii",
-    userAgent: "Apollo II",
+    name: "nerdoctaxe-den",
+    userAgent: "NerdOctaxe",
     sessionId: "j9k1",
-    hashrate: 4.8e11,
-    shares: 6_540,
-    bestDifficulty: 3_771_220,
+    hashrate: 12e12,
+    shares: 38_640,
+    bestDifficulty: 88_771_220,
     uptimeHours: 41,
-    tempC: 62,
+    tempC: 55,
     dashboardHost: "192.168.1.59",
     phase: 8.4,
   },
   {
     id: "10",
-    name: "lv06-closet",
-    userAgent: "Lucky Miner LV06",
+    name: "nerdminer-s2",
+    userAgent: "NerdMiner S2",
     sessionId: "k0l2",
-    hashrate: 3.5e11,
-    shares: 5_120,
-    bestDifficulty: 2_118_440,
+    hashrate: 9.5e4,
+    shares: 1_820,
+    bestDifficulty: 48_440,
     uptimeHours: 29,
-    tempC: 68,
+    tempC: 42,
     dashboardHost: "192.168.1.60",
     phase: 9.7,
   },
@@ -246,7 +273,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "m2n4",
     hashrate: 2.0e14,
     shares: 88_240,
-    bestDifficulty: 1_420_880_000,
+    bestDifficulty: DEMO_BEST_DIFFICULTY,
     uptimeHours: 110,
     tempC: 48,
     phase: 11.4,
@@ -290,14 +317,17 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
   },
 ];
 
-function hoursAgo(hours: number) {
-  return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+function hoursAgo(hours: number, now = Date.now()) {
+  return new Date(now - hours * 60 * 60 * 1000).toISOString();
 }
 
 /** Default empty chart: N hours × interval buckets (matches live pool slots). */
-export function buildZeroChart(hours = 24, intervalMinutes = 10): ChartPoint[] {
+export function buildZeroChart(
+  hours = 24,
+  intervalMinutes = 10,
+  now = Date.now(),
+): ChartPoint[] {
   const points: ChartPoint[] = [];
-  const now = Date.now();
   const steps = Math.max(1, Math.round((hours * 60) / intervalMinutes));
   for (let i = steps; i >= 1; i -= 1) {
     points.push({
@@ -308,19 +338,24 @@ export function buildZeroChart(hours = 24, intervalMinutes = 10): ChartPoint[] {
   return points;
 }
 
-function buildMinerHashrateChart(hashrate: number, phase: number): ChartPoint[] {
-  const points = buildZeroChart(CHART_HOURS, CHART_INTERVAL_MINUTES);
+function buildMinerHashrateChart(
+  baseHashrate: number,
+  phase: number,
+  now = Date.now(),
+): ChartPoint[] {
+  const points = buildZeroChart(CHART_HOURS, CHART_INTERVAL_MINUTES, now);
   const steps = points.length;
+  const liveHashrate = fluctuateHashrate(baseHashrate, phase, now);
 
   return points.map((point, index) => {
     const progress = index / Math.max(1, steps - 1);
-    const ramp = 0.72 + 0.28 * progress;
-    const wobble =
-      1 +
-      0.06 * Math.sin(index / 4 + phase) +
-      0.03 * Math.cos(index / 11 + phase);
+    const ramp = 0.78 + 0.22 * progress;
+    const pointTs = new Date(point.label).getTime();
+    const wobble = Number.isFinite(pointTs)
+      ? chartWobbleMultiplier(phase, pointTs)
+      : 1;
     const isLast = index === steps - 1;
-    const value = isLast ? hashrate : hashrate * ramp * wobble;
+    const value = isLast ? liveHashrate : baseHashrate * ramp * wobble;
 
     return {
       ...point,
@@ -329,12 +364,12 @@ function buildMinerHashrateChart(hashrate: number, phase: number): ChartPoint[] 
   });
 }
 
-function sumCharts(series: MinerChartSeries[]): ChartPoint[] {
-  if (series.length === 0) return buildZeroChart(CHART_HOURS, CHART_INTERVAL_MINUTES);
+function sumCharts(series: MinerChartSeries[], now = Date.now()): ChartPoint[] {
+  if (series.length === 0) return buildZeroChart(CHART_HOURS, CHART_INTERVAL_MINUTES, now);
 
   const length = series[0].chart.length;
   return Array.from({ length }, (_, index) => {
-    const label = series[0].chart[index]?.label ?? new Date().toISOString();
+    const label = series[0].chart[index]?.label ?? new Date(now).toISOString();
     const data = series.reduce(
       (sum, miner) => sum + (Number(miner.chart[index]?.data) || 0),
       0,
@@ -350,12 +385,12 @@ function buildMockWorkers(now = Date.now()): Worker[] {
     userAgent: miner.userAgent,
     address: DEMO_ADDRESS,
     sessionId: miner.sessionId,
-    hashrate: miner.hashrate,
+    hashrate: fluctuateHashrate(miner.hashrate, miner.phase, now),
     shares: miner.shares,
     bestDifficulty: miner.bestDifficulty,
     uptimeSeconds: miner.uptimeHours * 3600,
     lastSeen: new Date(now - (3_000 + index * 1_500)).toISOString(),
-    startTime: hoursAgo(miner.uptimeHours),
+    startTime: hoursAgo(miner.uptimeHours, now),
     tempC: miner.tempC,
     dashboardUrl: miner.dashboardHost ? `http://${miner.dashboardHost}` : null,
     blocksFound: 0,
@@ -363,16 +398,16 @@ function buildMockWorkers(now = Date.now()): Worker[] {
 }
 
 /** Coherent demo payload — worker hashrates, miner charts, and pool total all align. */
-export function buildMockDashboard(): DashboardPayload {
+export function buildMockDashboard(now = Date.now()): DashboardPayload {
   const minerCharts: MinerChartSeries[] = MOCK_MINER_SEEDS.map((miner) => ({
     id: miner.id,
     name: miner.name,
-    chart: buildMinerHashrateChart(miner.hashrate, miner.phase),
+    chart: buildMinerHashrateChart(miner.hashrate, miner.phase, now),
   }));
-  const chart = sumCharts(minerCharts);
-  const workers = buildMockWorkers();
+  const chart = sumCharts(minerCharts, now);
+  const workers = buildMockWorkers(now);
   const totalHashRate = workers.reduce((sum, worker) => sum + worker.hashrate, 0);
-  const bestDifficulty = Math.max(...workers.map((worker) => worker.bestDifficulty));
+  const bestDifficulty = DEMO_BEST_DIFFICULTY;
   const blockHeight = 918_742;
 
   return {
@@ -386,7 +421,7 @@ export function buildMockDashboard(): DashboardPayload {
       fee: 0,
     },
     chart,
-    chartSince: hoursAgo(CHART_HOURS),
+    chartSince: hoursAgo(CHART_HOURS, now),
     network: {
       height: blockHeight,
       nextHeight: blockHeight + 1,

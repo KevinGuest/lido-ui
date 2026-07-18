@@ -232,6 +232,23 @@ function prepareWeekCompareRows(
   };
 }
 
+function downsampleRows(rows: ChartRow[], keys: string[], maxPoints = 48): ChartRow[] {
+  if (rows.length <= maxPoints) return rows;
+  const bucketSize = Math.ceil(rows.length / maxPoints);
+  const out: ChartRow[] = [];
+  for (let i = 0; i < rows.length; i += bucketSize) {
+    const slice = rows.slice(i, i + bucketSize);
+    const anchor = slice[slice.length - 1] ?? slice[0];
+    const row: ChartRow = { time: anchor.time, iso: anchor.iso };
+    for (const key of keys) {
+      row[key] =
+        slice.reduce((sum, point) => sum + (Number(point[key]) || 0), 0) / slice.length;
+    }
+    out.push(row);
+  }
+  return out;
+}
+
 function prepareMinerRows(
   miners: MinerChartSeries[],
   window: TimeWindow,
@@ -260,20 +277,43 @@ function prepareMinerRows(
     byKey.set(key, map);
   });
 
-  const timestamps = new Set<number>();
-  for (const map of byKey.values()) {
-    for (const ts of map.keys()) timestamps.add(ts);
-  }
-  const sorted = Array.from(timestamps).sort((a, b) => a - b);
+  // Prefer timestamps from the first series (shared buckets); union as fallback for live data.
+  const primary = byKey.get(keys[0] ?? "");
+  const timestamps =
+    primary && primary.size > 0
+      ? Array.from(primary.keys()).sort((a, b) => a - b)
+      : Array.from(
+          new Set(
+            Array.from(byKey.values()).flatMap((map) => Array.from(map.keys())),
+          ),
+        ).sort((a, b) => a - b);
 
-  const rows: ChartRow[] = sorted.map((ts) => {
+  const lastByKey = new Map<string, number>();
+  const rawRows: ChartRow[] = timestamps.map((ts) => {
     const iso = new Date(ts).toISOString();
     const row: ChartRow = { time: formatTick(iso, spanMs), iso };
     for (const key of keys) {
-      row[key] = byKey.get(key)?.get(ts) ?? 0;
+      const exact = byKey.get(key)?.get(ts);
+      if (exact != null) {
+        lastByKey.set(key, exact);
+        row[key] = exact;
+      } else {
+        row[key] = lastByKey.get(key) ?? 0;
+      }
     }
     return row;
   });
+
+  // Largest series first → bottom of stack (easier to read big vs small miners).
+  keys.sort((a, b) => {
+    const avgA =
+      rawRows.reduce((sum, row) => sum + (Number(row[a]) || 0), 0) / Math.max(1, rawRows.length);
+    const avgB =
+      rawRows.reduce((sum, row) => sum + (Number(row[b]) || 0), 0) / Math.max(1, rawRows.length);
+    return avgB - avgA;
+  });
+
+  const rows = downsampleRows(rawRows, keys, 48);
 
   return {
     rows,
@@ -425,12 +465,40 @@ function MinersHashrateChart({
   keys,
   config,
   flatZero,
+  emptySelection,
 }: {
   rows: ChartRow[];
   keys: string[];
   config: ChartConfig;
   flatZero: boolean;
+  emptySelection?: boolean;
 }) {
+  const [pinnedKey, setPinnedKey] = React.useState<string | null>(null);
+  const [hoveredKey, setHoveredKey] = React.useState<string | null>(null);
+  const ignoreChartClickRef = React.useRef(false);
+  // Pinned click focus wins over hover so empty-space still shows that miner.
+  const focusedKey = pinnedKey ?? hoveredKey;
+
+  React.useEffect(() => {
+    setPinnedKey((current) => (current && keys.includes(current) ? current : null));
+  }, [keys]);
+
+  function togglePin(key: string) {
+    ignoreChartClickRef.current = true;
+    setPinnedKey((current) => (current === key ? null : key));
+    window.setTimeout(() => {
+      ignoreChartClickRef.current = false;
+    }, 0);
+  }
+
+  if (emptySelection) {
+    return (
+      <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+        Select miners below to plot their hashrate over time.
+      </div>
+    );
+  }
+
   if (keys.length === 0) {
     return (
       <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
@@ -449,7 +517,16 @@ function MinersHashrateChart({
 
   return (
     <ChartContainer config={config} className="aspect-auto h-72 w-full overflow-visible">
-      <LineChart accessibilityLayer data={rows} margin={{ left: 12, right: 8, top: 20, bottom: 4 }}>
+      <LineChart
+        accessibilityLayer
+        data={rows}
+        margin={{ left: 12, right: 8, top: 20, bottom: 4 }}
+        onMouseLeave={() => setHoveredKey(null)}
+        onClick={() => {
+          if (ignoreChartClickRef.current) return;
+          setPinnedKey(null);
+        }}
+      >
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
         <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
         <YAxis
@@ -461,32 +538,126 @@ function MinersHashrateChart({
           tickFormatter={(value: number) => hashAxisTick(value)}
         />
         <ChartTooltip
-          content={
-            <ChartTooltipContent
-              indicator="dot"
-              labelFormatter={(_, items) => {
-                const iso = items?.[0]?.payload?.iso as string | undefined;
-                return iso ? formatTooltipLabel(iso) : "";
-              }}
-              formatter={(value) => hashSuffix(Number(value))}
-            />
-          }
+          shared
+          cursor={{ stroke: "oklch(1 0 0 / 20%)", strokeWidth: 1 }}
+          content={({ active, payload, label }) => {
+            const items = focusedKey
+              ? payload?.filter((item) => item.dataKey === focusedKey)
+              : payload;
+            if (!active || !items?.length) return null;
+            return (
+              <ChartTooltipContent
+                active={active}
+                payload={items}
+                label={label}
+                indicator="dot"
+                labelFormatter={(_, tooltipItems) => {
+                  const iso = tooltipItems?.[0]?.payload?.iso as string | undefined;
+                  return iso ? formatTooltipLabel(iso) : "";
+                }}
+                formatter={(value) => hashSuffix(Number(value))}
+              />
+            );
+          }}
         />
-        <ChartLegend content={<ChartLegendContent />} />
-        {keys.map((key) => (
-          <Line
-            key={key}
-            type="monotone"
-            dataKey={key}
-            stroke={`var(--color-${key})`}
-            strokeWidth={2}
-            strokeOpacity={0.9}
-            dot={false}
-            activeDot={{ r: 3 }}
-          />
-        ))}
+        {keys.map((key) => {
+          const isFocused = focusedKey === key;
+          const isDimmed = Boolean(focusedKey && !isFocused);
+          return (
+            <Line
+              key={key}
+              type="monotone"
+              dataKey={key}
+              stroke={`var(--color-${key})`}
+              strokeWidth={isFocused ? 2.75 : 2}
+              strokeOpacity={isDimmed ? 0.28 : 0.95}
+              dot={false}
+              style={{
+                cursor: isDimmed ? "default" : "pointer",
+                pointerEvents: isDimmed ? "none" : "auto",
+              }}
+              activeDot={
+                isDimmed
+                  ? false
+                  : {
+                      r: 5,
+                      strokeWidth: 0,
+                      stroke: "transparent",
+                      cursor: "pointer",
+                      onMouseEnter: () => setHoveredKey(key),
+                      onMouseLeave: () => setHoveredKey(null),
+                      onClick: () => togglePin(key),
+                    }
+              }
+              onMouseEnter={() => {
+                if (!isDimmed) setHoveredKey(key);
+              }}
+              onMouseLeave={() => setHoveredKey(null)}
+              onClick={() => {
+                if (!isDimmed) togglePin(key);
+              }}
+              isAnimationActive={false}
+            />
+          );
+        })}
       </LineChart>
     </ChartContainer>
+  );
+}
+
+function MinerSelectionBar({
+  miners,
+  selectedIds,
+  onToggle,
+  onClear,
+}: {
+  miners: MinerChartSeries[];
+  selectedIds: Set<string>;
+  onToggle: (id: string) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="mt-4 space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-muted-foreground">
+          {selectedIds.size === 0
+            ? "Tap miners to plot their lines."
+            : `${selectedIds.size} miner${selectedIds.size === 1 ? "" : "s"} selected`}
+        </p>
+        {selectedIds.size > 0 ? (
+          <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={onClear}>
+            Clear all
+          </Button>
+        ) : null}
+      </div>
+      <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2">
+        {miners.map((miner) => {
+          const selected = selectedIds.has(miner.id);
+          const color = minerColor(miner.name);
+          return (
+            <button
+              key={miner.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onToggle(miner.id)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors",
+                selected
+                  ? "border-border bg-background text-foreground shadow-sm"
+                  : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+              )}
+              style={selected ? { outline: `1.5px solid ${color}`, outlineOffset: 0 } : undefined}
+            >
+              <span
+                className="size-2 shrink-0 rounded-full"
+                style={{ backgroundColor: color, opacity: selected ? 1 : 0.45 }}
+              />
+              <span className="max-w-[10rem] truncate">{miner.name}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -580,6 +751,9 @@ export function HashrateChart({
 }) {
   const [pageIndex, setPageIndex] = React.useState(0);
   const [liveMode, setLiveMode] = React.useState(true);
+  const [selectedMinerIds, setSelectedMinerIds] = React.useState<Set<string>>(
+    () => new Set(),
+  );
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(() => ({
     from: startOfLocalDay(new Date(chartSince)),
     to: endOfLocalDay(new Date()),
@@ -620,8 +794,25 @@ export function HashrateChart({
 
   const total = prepareTotalRows(data, window);
   const weekCompare = prepareWeekCompareRows(data, weekEndMs, chartSince);
-  const minerView = prepareMinerRows(minerCharts, window);
+  const selectedMinerCharts = React.useMemo(
+    () => minerCharts.filter((miner) => selectedMinerIds.has(miner.id)),
+    [minerCharts, selectedMinerIds],
+  );
+  const minerView = prepareMinerRows(selectedMinerCharts, window);
   const hasLiveHashrate = liveHashrate > 0;
+
+  const toggleMiner = React.useCallback((id: string) => {
+    setSelectedMinerIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const clearMiners = React.useCallback(() => {
+    setSelectedMinerIds(new Set());
+  }, []);
 
   return (
     <Card>
@@ -694,12 +885,21 @@ export function HashrateChart({
         ) : page.key === "week" ? (
           <WeekCompareChart rows={weekCompare.rows} flatZero={weekCompare.flatZero} />
         ) : (
-          <MinersHashrateChart
-            rows={minerView.rows}
-            keys={minerView.keys}
-            config={minerView.config}
-            flatZero={minerView.flatZero}
-          />
+          <>
+            <MinersHashrateChart
+              rows={minerView.rows}
+              keys={minerView.keys}
+              config={minerView.config}
+              flatZero={minerView.flatZero}
+              emptySelection={selectedMinerIds.size === 0}
+            />
+            <MinerSelectionBar
+              miners={minerCharts}
+              selectedIds={selectedMinerIds}
+              onToggle={toggleMiner}
+              onClear={clearMiners}
+            />
+          </>
         )}
       </CardContent>
     </Card>

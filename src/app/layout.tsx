@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 
 import { DemoSiteBanner } from "@/components/demo-site-banner";
+import { ThemeInit } from "@/components/theme-init";
 import { cn } from "@/lib/utils";
 
 import "./globals.css";
@@ -24,8 +24,6 @@ export const metadata: Metadata = {
   description: "Lido is a Fully Open Source Solo Bitcoin Mining Pool fork of Public Pool.",
 };
 
-const themeInitScript = `(function(){try{var t=localStorage.getItem("lido-theme");var d=t?t==="dark":true;document.documentElement.classList.toggle("dark",d);document.documentElement.style.colorScheme=d?"dark":"light"}catch(e){document.documentElement.classList.add("dark");document.documentElement.style.colorScheme="dark"}})();`;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,9 +36,7 @@ export default function RootLayout({
       className={cn("dark font-sans", geist.variable, geistMono.variable)}
     >
       <body className="min-h-screen antialiased">
-        <Script id="lido-theme-init" strategy="beforeInteractive">
-          {themeInitScript}
-        </Script>
+        <ThemeInit />
         {isDemoSite ? <DemoSiteBanner /> : null}
         {children}
       </body>

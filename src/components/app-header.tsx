@@ -2,19 +2,18 @@ import Image from "next/image";
 
 import { AppNav } from "@/components/app-nav";
 import type { NetworkInfo } from "@/lib/mock-data";
-import { configuredStratumUrl } from "@/lib/pool";
 
 export function AppHeader({
   title = "Lido",
   subtitle = "#2BGA",
   network,
+  stratumConfigured = "",
 }: {
   title?: string;
   subtitle?: string;
   network: NetworkInfo;
+  stratumConfigured?: string;
 }) {
-  const stratumConfigured = configuredStratumUrl();
-
   return (
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div className="flex items-start gap-3">

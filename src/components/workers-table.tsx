@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Flame, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flame, List, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatUptime, hashSuffix, numberSuffix, timeAgo } from "@/lib/format";
+import { RelativeTime } from "@/components/relative-time";
+import { formatUptime, hashSuffix, numberSuffix } from "@/lib/format";
 import { minerColor } from "@/lib/miner-colors";
 import type { Worker } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
@@ -198,7 +199,7 @@ function WorkerDialog({
       label: "Last seen",
       value: (
         <DetailValue>
-          {worker.lastSeen ? timeAgo(worker.lastSeen) : "n/a"}
+          <RelativeTime iso={worker.lastSeen} />
         </DetailValue>
       ),
     },
@@ -320,44 +321,18 @@ export function WorkersTable({
               <button
                 type="button"
                 onClick={togglePaginate}
+                aria-label={paginate ? "Turn off pagination" : "Paginate miners"}
+                aria-pressed={paginate}
+                title={paginate ? "Turn off pagination" : "Paginate"}
                 className={cn(
-                  "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                  "inline-flex items-center justify-center rounded-full border px-2.5 py-1 transition-colors",
                   paginate
                     ? "border-transparent bg-foreground text-background"
                     : "border-border text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                 )}
               >
-                Paginate
+                <List className="size-3.5" strokeWidth={1.75} />
               </button>
-              {paginate && sorted.length > PAGE_SIZE ? (
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Previous page"
-                    disabled={safePageIndex === 0}
-                    onClick={() => setPageIndex((page) => Math.max(0, page - 1))}
-                  >
-                    <ChevronLeft />
-                  </Button>
-                  <span className="min-w-[4.5rem] text-center text-xs tabular-nums text-muted-foreground">
-                    {safePageIndex + 1} / {pageCount}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Next page"
-                    disabled={safePageIndex >= pageCount - 1}
-                    onClick={() =>
-                      setPageIndex((page) => Math.min(pageCount - 1, page + 1))
-                    }
-                  >
-                    <ChevronRight />
-                  </Button>
-                </div>
-              ) : null}
               <span className="mx-0.5 hidden h-4 w-px bg-border sm:inline-block" />
               <span className="mr-0.5 text-xs text-muted-foreground">Sort</span>
               {SORT_OPTIONS.map((option) => (
@@ -433,7 +408,7 @@ export function WorkersTable({
                         : formatUptime(worker.uptimeSeconds)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-muted-foreground">
-                      {worker.lastSeen ? timeAgo(worker.lastSeen) : "n/a"}
+                      <RelativeTime iso={worker.lastSeen} />
                     </TableCell>
                   </TableRow>
                 ))
@@ -441,11 +416,35 @@ export function WorkersTable({
             </TableBody>
           </Table>
           {paginate && sorted.length > PAGE_SIZE ? (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Showing {safePageIndex * PAGE_SIZE + 1}–
-              {Math.min((safePageIndex + 1) * PAGE_SIZE, sorted.length)} of{" "}
-              {sorted.length} miners
-            </p>
+            <div className="mt-4 flex items-center justify-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Previous page"
+                disabled={safePageIndex === 0}
+                onClick={() => setPageIndex((page) => Math.max(0, page - 1))}
+              >
+                <ChevronLeft />
+              </Button>
+              <span className="min-w-[10rem] text-center text-xs tabular-nums text-muted-foreground">
+                Showing {safePageIndex * PAGE_SIZE + 1}–
+                {Math.min((safePageIndex + 1) * PAGE_SIZE, sorted.length)} of{" "}
+                {sorted.length} miners
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Next page"
+                disabled={safePageIndex >= pageCount - 1}
+                onClick={() =>
+                  setPageIndex((page) => Math.min(pageCount - 1, page + 1))
+                }
+              >
+                <ChevronRight />
+              </Button>
+            </div>
           ) : null}
         </CardContent>
       </Card>

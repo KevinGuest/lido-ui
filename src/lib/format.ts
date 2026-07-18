@@ -30,7 +30,7 @@ export function formatUptime(seconds: number): string {
 export function timeAgo(iso: string): string {
   const delta = Date.now() - new Date(iso).getTime();
   const s = Math.max(0, Math.floor(delta / 1000));
-  if (s < 60) return `${s}s ago`;
+  if (s < 60) return "<1 min ago";
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);

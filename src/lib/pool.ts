@@ -1,7 +1,9 @@
 import { unstable_noStore as noStore } from "next/cache";
 
+import { applyLiveChainSnapshot, fetchLiveChainSnapshot } from "@/lib/live-chain";
 import { buildMockDashboard, type ChartPoint, type DashboardPayload, type DifficultyAdjustment, type FoundBlock, type MinerChartSeries, type NetworkInfo, type Worker } from "@/lib/mock-data";
 import { discoverMinerHosts } from "@/lib/network-scan";
+import { configuredStratumUrl as configuredStratumUrlPublic } from "@/lib/pool-public";
 
 /** Dynamic access so Next does not inline these at docker build time. */
 function env(name: string): string {
@@ -25,8 +27,7 @@ function mempoolBaseUrl() {
 export function configuredStratumUrl() {
   return (
     env("PUBLIC_POOL_STRATUM_URL") ||
-    env("NEXT_PUBLIC_POOL_STRATUM_URL") ||
-    env("NEXT_PUBLIC_STRATUM_URL") ||
+    configuredStratumUrlPublic() ||
     ""
   );
 }
@@ -177,35 +178,22 @@ function mapNetwork(raw: LiveNetworkResponse | null, fallbackHeight: number): Ne
   };
 }
 
-type MempoolDifficultyAdjustment = {
-  progressPercent?: number;
-  difficultyChange?: number;
-  previousRetarget?: number;
-  remainingBlocks?: number;
-  nextRetargetHeight?: number;
-  estimatedRetargetDate?: number;
-  timeAvg?: number;
-  expectedBlocks?: number;
-};
-
 async function loadDifficultyAdjustment(): Promise<DifficultyAdjustment | null> {
   try {
-    const raw = await fetchJson<MempoolDifficultyAdjustment>(
-      `${mempoolBaseUrl()}/v1/difficulty-adjustment`,
-      { signal: AbortSignal.timeout(8000) },
-    );
-    return {
-      progressPercent: Number(raw.progressPercent) || 0,
-      difficultyChange: Number(raw.difficultyChange) || 0,
-      previousRetarget: Number(raw.previousRetarget) || 0,
-      remainingBlocks: Number(raw.remainingBlocks) || 0,
-      nextRetargetHeight: Number(raw.nextRetargetHeight) || 0,
-      estimatedRetargetDate: Number(raw.estimatedRetargetDate) || 0,
-      timeAvgMs: Number(raw.timeAvg) || 0,
-      expectedBlocks: Number(raw.expectedBlocks) || 0,
-    };
+    const live = await fetchLiveChainSnapshot(mempoolBaseUrl());
+    return live.difficultyAdjustment;
   } catch {
     return null;
+  }
+}
+
+/** Overlay live Bitcoin network stats onto the demo dashboard (miners stay mocked). */
+async function enrichMockWithLiveChain(mock: DashboardPayload): Promise<DashboardPayload> {
+  try {
+    const live = await fetchLiveChainSnapshot(mempoolBaseUrl());
+    return applyLiveChainSnapshot(mock, live);
+  } catch {
+    return mock;
   }
 }
 
@@ -527,9 +515,18 @@ function emptyLiveDashboard(): DashboardPayload {
 }
 
 export async function getDashboard(): Promise<DashboardPayload> {
-  // GitHub Pages demo only — never bake mock stats into the Umbrel/Docker image.
+  // Demo/mock: fake miners + live chain stats from mempool.space.
   if (useMockData()) {
-    return buildMockDashboard();
+    // Local mock refreshes each request; static GH Pages export stays build-time.
+    if (env("GITHUB_PAGES") !== "true") {
+      noStore();
+    }
+    const mock = buildMockDashboard();
+    try {
+      return await enrichMockWithLiveChain(mock);
+    } catch {
+      return mock;
+    }
   }
 
   // Always render at request time so PUBLIC_POOL_API_URL from compose applies.
