@@ -108,7 +108,7 @@ function DetailValue({ children, className }: { children: ReactNode; className?:
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-sm tabular-nums text-foreground",
+        "inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-transparent px-2.5 py-0.5 text-sm tabular-nums text-foreground",
         className,
       )}
     >

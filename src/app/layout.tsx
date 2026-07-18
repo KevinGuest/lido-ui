@@ -7,7 +7,10 @@ import { cn } from "@/lib/utils";
 
 import "./globals.css";
 
-const isDemoSite = process.env.GITHUB_PAGES === "true";
+const isDemoSite =
+  process.env.GITHUB_PAGES === "true" ||
+  process.env.NEXT_PUBLIC_LIDO_DEMO === "true" ||
+  process.env.LIDO_USE_MOCK === "true";
 
 const geist = Geist({
   subsets: ["latin"],

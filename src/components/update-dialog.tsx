@@ -74,7 +74,7 @@ export function UpdateDialog({
             <CardHeader>
               <CardTitle>Update available</CardTitle>
               <CardDescription>
-                A newer Lido UI release is available. You are on{" "}
+                A newer version of Lido is available. You are on{" "}
                 <span className="font-medium text-foreground">v{currentVersion}</span>.
               </CardDescription>
               <CardAction>

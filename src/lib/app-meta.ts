@@ -7,7 +7,13 @@ export const UMBREL_APP_URL = "https://github.com/KevinGuest/lido-app";
 export type DeploymentKind = "demo" | "umbrel" | "self-hosted";
 
 export function deploymentKind(): DeploymentKind {
-  if (process.env.GITHUB_PAGES === "true") return "demo";
+  if (
+    process.env.GITHUB_PAGES === "true" ||
+    process.env.NEXT_PUBLIC_LIDO_DEMO === "true" ||
+    process.env.LIDO_USE_MOCK === "true"
+  ) {
+    return "demo";
+  }
   const api = (process.env.PUBLIC_POOL_API_URL ?? "").trim();
   if (api.includes("lido-app") || api.includes(":2019")) return "umbrel";
   return "self-hosted";

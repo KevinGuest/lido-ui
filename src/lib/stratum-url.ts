@@ -1,4 +1,6 @@
 const DEFAULT_STRATUM_PORT = 3333;
+export const STRATUM_V1_PORT = 3333;
+export const STRATUM_V2_PORT = 4444;
 
 /** Hostnames that should be replaced with the browser host when they differ. */
 const GENERIC_STRATUM_HOSTS = new Set([
@@ -13,6 +15,14 @@ export function stratumPortFromConfigured(configured: string): number {
   if (!match) return DEFAULT_STRATUM_PORT;
   const port = parseInt(match[1], 10);
   return Number.isFinite(port) ? port : DEFAULT_STRATUM_PORT;
+}
+
+/** Replace or append the port on a host:port stratum endpoint. */
+export function withStratumPort(endpoint: string, port: number): string {
+  const trimmed = endpoint.trim();
+  if (!trimmed) return `localhost:${port}`;
+  const host = trimmed.replace(/:\d+$/, "");
+  return `${host}:${port}`;
 }
 
 /**

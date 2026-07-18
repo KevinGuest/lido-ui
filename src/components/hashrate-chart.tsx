@@ -630,7 +630,7 @@ function MinerSelectionBar({
           </Button>
         ) : null}
       </div>
-      <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2">
+      <div className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-border bg-transparent p-2">
         {miners.map((miner) => {
           const selected = selectedIds.has(miner.id);
           const color = minerColor(miner.name);
@@ -643,8 +643,8 @@ function MinerSelectionBar({
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors",
                 selected
-                  ? "border-border bg-background text-foreground shadow-sm"
-                  : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                  ? "border-border bg-transparent text-foreground"
+                  : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
               )}
               style={selected ? { outline: `1.5px solid ${color}`, outlineOffset: 0 } : undefined}
             >

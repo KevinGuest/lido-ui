@@ -3,10 +3,12 @@ import type { NextConfig } from "next";
 import packageJson from "./package.json";
 
 const isPages = process.env.GITHUB_PAGES === "true";
+const isDemo = isPages || process.env.LIDO_USE_MOCK === "true";
 
 const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_LIDO_VERSION: packageJson.version,
+    ...(isDemo ? { NEXT_PUBLIC_LIDO_DEMO: "true" } : {}),
   },
   output: isPages ? "export" : "standalone",
   ...(isPages
