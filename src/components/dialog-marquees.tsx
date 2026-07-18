@@ -4,6 +4,10 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
+/** Keep visual px/s stable: ~60s for a short dialog line × 12 repeats. */
+const MARQUEE_REF_CHARS = 280;
+const MARQUEE_REF_DURATION_S = 60;
+
 export function MarqueeTrack({
   text,
   reverse,
@@ -13,6 +17,10 @@ export function MarqueeTrack({
 }) {
   const segment = `${text.trim().replace(/\s*·\s*$/, "")} · `;
   const line = Array.from({ length: 12 }, () => segment).join("");
+  const durationSec = Math.max(
+    20,
+    (line.length / MARQUEE_REF_CHARS) * MARQUEE_REF_DURATION_S,
+  );
 
   return (
     <div className="overflow-hidden whitespace-nowrap" aria-hidden="true">
@@ -21,6 +29,7 @@ export function MarqueeTrack({
           "inline-flex w-max font-mono text-[10px] font-bold uppercase tracking-[0.22em]",
           reverse ? "animate-lido-marquee-reverse" : "animate-lido-marquee",
         )}
+        style={{ animationDuration: `${durationSec}s` }}
       >
         <span className="pr-6">{line}</span>
         <span className="pr-6">{line}</span>

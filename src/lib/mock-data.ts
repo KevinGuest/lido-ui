@@ -55,6 +55,7 @@ export type Worker = {
   sessionId: string;
   hashrate: number;
   shares: number;
+  rejectedShares: number;
   bestDifficulty: number;
   uptimeSeconds: number | null;
   lastSeen: string | null;
@@ -116,6 +117,7 @@ type MockMinerSeed = {
   sessionId: string;
   hashrate: number;
   shares: number;
+  rejectedShares: number;
   bestDifficulty: number;
   uptimeHours: number;
   tempC: number;
@@ -131,6 +133,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "a1f3",
     hashrate: 1.38e12,
     shares: 18_420,
+    rejectedShares: 41,
     bestDifficulty: 68_274_102,
     uptimeHours: 72,
     tempC: 58,
@@ -144,6 +147,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "b2c4",
     hashrate: 1.12e12,
     shares: 14_880,
+    rejectedShares: 61,
     bestDifficulty: 41_002_110,
     uptimeHours: 48,
     tempC: 61,
@@ -157,6 +161,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "c3d5",
     hashrate: 2.08e12,
     shares: 26_140,
+    rejectedShares: 39,
     bestDifficulty: 118_440_200,
     uptimeHours: 120,
     tempC: 49,
@@ -170,6 +175,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "d4e6",
     hashrate: 8.6e11,
     shares: 11_640,
+    rejectedShares: 79,
     bestDifficulty: 12_845_023,
     uptimeHours: 26,
     tempC: 63,
@@ -183,6 +189,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "e5f7",
     hashrate: 9.8e11,
     shares: 13_220,
+    rejectedShares: 44,
     bestDifficulty: 9_812_004,
     uptimeHours: 64,
     tempC: 57,
@@ -196,6 +203,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "f6g8",
     hashrate: 1.05e12,
     shares: 15_760,
+    rejectedShares: 46,
     bestDifficulty: 18_331_900,
     uptimeHours: 88,
     tempC: 54,
@@ -209,6 +217,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "g7h9",
     hashrate: 6.2e11,
     shares: 8_410,
+    rejectedShares: 63,
     bestDifficulty: 6_204_880,
     uptimeHours: 34,
     tempC: 66,
@@ -222,6 +231,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "h8j0",
     hashrate: 5.4e11,
     shares: 7_980,
+    rejectedShares: 38,
     bestDifficulty: 4_992_110,
     uptimeHours: 52,
     tempC: 59,
@@ -235,6 +245,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "j9k1",
     hashrate: 12e12,
     shares: 38_640,
+    rejectedShares: 73,
     bestDifficulty: 88_771_220,
     uptimeHours: 41,
     tempC: 55,
@@ -248,6 +259,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "k0l2",
     hashrate: 9.5e4,
     shares: 1_820,
+    rejectedShares: 17,
     bestDifficulty: 48_440,
     uptimeHours: 29,
     tempC: 42,
@@ -261,6 +273,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "l1m3",
     hashrate: 9.0e13,
     shares: 42_600,
+    rejectedShares: 51,
     bestDifficulty: 892_110_000,
     uptimeHours: 96,
     tempC: 52,
@@ -273,6 +286,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "m2n4",
     hashrate: 2.0e14,
     shares: 88_240,
+    rejectedShares: 71,
     bestDifficulty: DEMO_BEST_DIFFICULTY,
     uptimeHours: 110,
     tempC: 48,
@@ -285,6 +299,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "n3p5",
     hashrate: 1.36e14,
     shares: 61_880,
+    rejectedShares: 68,
     bestDifficulty: 980_440_000,
     uptimeHours: 84,
     tempC: 50,
@@ -297,6 +312,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "p4q6",
     hashrate: 8.4e11,
     shares: 9_880,
+    rejectedShares: 37,
     bestDifficulty: 14_220_000,
     uptimeHours: 56,
     tempC: 56,
@@ -310,6 +326,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     sessionId: "q5r7",
     hashrate: 3.1e13,
     shares: 19_420,
+    rejectedShares: 47,
     bestDifficulty: 156_880_000,
     uptimeHours: 73,
     tempC: 51,
@@ -387,6 +404,7 @@ function buildMockWorkers(now = Date.now()): Worker[] {
     sessionId: miner.sessionId,
     hashrate: fluctuateHashrate(miner.hashrate, miner.phase, now),
     shares: miner.shares,
+    rejectedShares: miner.rejectedShares,
     bestDifficulty: miner.bestDifficulty,
     uptimeSeconds: miner.uptimeHours * 3600,
     lastSeen: new Date(now - (3_000 + index * 1_500)).toISOString(),

@@ -87,6 +87,23 @@ function rankByBestDiff(workers: Worker[]) {
   return ranks;
 }
 
+function rejectShareLabel(accepted: number, rejected: number) {
+  const total = accepted + rejected;
+  if (total <= 0) return "0%";
+  return `${((rejected / total) * 100).toFixed(1)}%`;
+}
+
+function SharesCell({ accepted, rejected }: { accepted: number; rejected: number }) {
+  return (
+    <div className="flex flex-col items-end gap-0.5 leading-tight">
+      <span className="tabular-nums">{accepted.toLocaleString()}</span>
+      <span className="text-[11px] text-muted-foreground tabular-nums">
+        {rejected.toLocaleString()} rej · {rejectShareLabel(accepted, rejected)}
+      </span>
+    </div>
+  );
+}
+
 function DetailValue({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <span
@@ -172,7 +189,15 @@ function WorkerDialog({
     },
     {
       label: "Shares",
-      value: <DetailValue>{worker.shares.toLocaleString()}</DetailValue>,
+      value: (
+        <DetailValue className="flex-col items-end gap-0.5 rounded-lg py-1">
+          <span>{worker.shares.toLocaleString()} accepted</span>
+          <span className="text-[11px] font-normal text-muted-foreground">
+            {worker.rejectedShares.toLocaleString()} rejected ·{" "}
+            {rejectShareLabel(worker.shares, worker.rejectedShares)}
+          </span>
+        </DetailValue>
+      ),
     },
     {
       label: "Best diff",
@@ -399,8 +424,8 @@ export function WorkersTable({
                     <TableCell className="text-right tabular-nums">
                       {hashSuffix(worker.hashrate)}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {worker.shares.toLocaleString()}
+                    <TableCell className="text-right">
+                      <SharesCell accepted={worker.shares} rejected={worker.rejectedShares} />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {worker.uptimeSeconds == null

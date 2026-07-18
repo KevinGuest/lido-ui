@@ -86,6 +86,7 @@ type PoolWorker = {
   userAgent?: string;
   address?: string;
   shares?: number;
+  rejectedShares?: number;
 };
 
 type PoolClientResponse = {
@@ -230,6 +231,7 @@ function poolWorkerToWorker(session: PoolWorker, fallbackAddress = ""): Worker {
     sessionId: session.sessionId,
     hashrate: session.hashRate,
     shares: Number(session.shares) || 0,
+    rejectedShares: Number(session.rejectedShares) || 0,
     bestDifficulty: parseDifficulty(session.bestDifficulty),
     uptimeSeconds,
     lastSeen: session.lastSeen,
@@ -318,6 +320,7 @@ async function loadMinerDevice(host: string): Promise<Worker | null> {
     sessionId: "",
     hashrate: normalizedHashrate,
     shares: 0,
+    rejectedShares: 0,
     bestDifficulty,
     uptimeSeconds,
     lastSeen: new Date().toISOString(),
@@ -397,6 +400,7 @@ function mergeWorkers(poolWorkers: Worker[], devices: Worker[]): Worker[] {
       userAgent: device.userAgent || poolWorker.userAgent,
       hashrate: poolWorker.hashrate || device.hashrate,
       shares: poolWorker.shares || device.shares,
+      rejectedShares: poolWorker.rejectedShares || device.rejectedShares,
       bestDifficulty: Math.max(poolWorker.bestDifficulty, device.bestDifficulty),
       uptimeSeconds: device.uptimeSeconds ?? poolWorker.uptimeSeconds,
       tempC: device.tempC ?? poolWorker.tempC,
@@ -431,10 +435,12 @@ function dedupeWorkersByName(workers: Worker[]): Worker[] {
       byKey.set(key, {
         ...worker,
         shares: Math.max(worker.shares, existing.shares),
+        rejectedShares: Math.max(worker.rejectedShares, existing.rejectedShares),
         bestDifficulty: Math.max(worker.bestDifficulty, existing.bestDifficulty),
       });
     } else {
       existing.shares = Math.max(existing.shares, worker.shares);
+      existing.rejectedShares = Math.max(existing.rejectedShares, worker.rejectedShares);
       existing.bestDifficulty = Math.max(existing.bestDifficulty, worker.bestDifficulty);
     }
   }
