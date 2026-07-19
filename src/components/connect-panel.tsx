@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { DoorOpen, HardHat } from "lucide-react";
+import { Check, Copy, DoorOpen, HardHat } from "lucide-react";
 
 import { DialogMarquees } from "@/components/dialog-marquees";
 import { ModalOverlay } from "@/components/modal-overlay";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
@@ -51,14 +50,30 @@ function CopyRow({
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 py-3 last:border-0">
+    <div className="flex items-start gap-2 border-b border-border/40 py-3 last:border-0">
       <div className="min-w-0 flex-1">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="break-all font-mono text-sm">{value}</p>
+        <p className="break-all font-mono text-sm leading-snug">{value}</p>
       </div>
-      <Button type="button" size="sm" variant="outline" onClick={copy} disabled={!canCopy}>
-        {copied ? "Copied" : "Copy"}
-      </Button>
+      <button
+        type="button"
+        aria-label={copied ? "Copied" : "Copy"}
+        title={copied ? "Copied" : "Copy"}
+        onClick={copy}
+        disabled={!canCopy}
+        className={cn(
+          "mt-0.5 shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors",
+          "hover:text-neutral-950 focus-visible:text-neutral-950",
+          "dark:hover:text-white dark:focus-visible:text-white",
+          "focus-visible:outline-none disabled:pointer-events-none disabled:opacity-30",
+        )}
+      >
+        {copied ? (
+          <Check className="size-4" strokeWidth={1.75} />
+        ) : (
+          <Copy className="size-4" strokeWidth={1.75} />
+        )}
+      </button>
     </div>
   );
 }
