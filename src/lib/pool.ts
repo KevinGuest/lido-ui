@@ -84,6 +84,7 @@ type PoolWorker = {
   startTime: string;
   lastSeen: string;
   userAgent?: string;
+  protocol?: string;
   address?: string;
   shares?: number;
   rejectedShares?: number;
@@ -227,6 +228,7 @@ function poolWorkerToWorker(session: PoolWorker, fallbackAddress = ""): Worker {
     id: `${address || "pool"}-${session.name}-${session.sessionId}`,
     name: session.name,
     userAgent: session.userAgent || "unknown",
+    protocol: session.protocol === "sv2" ? "sv2" : "sv1",
     address,
     sessionId: session.sessionId,
     hashrate: session.hashRate,
@@ -316,6 +318,7 @@ async function loadMinerDevice(host: string): Promise<Worker | null> {
     id: `${ip}-${name}`,
     name,
     userAgent: info?.deviceModel || info?.ASICModel || "AxeOS",
+    protocol: "sv1",
     address: parsed.address,
     sessionId: "",
     hashrate: normalizedHashrate,

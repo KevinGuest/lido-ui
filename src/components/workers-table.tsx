@@ -221,6 +221,12 @@ function WorkerDialog({
       value: <DetailValue>{worker.blocksFound}</DetailValue>,
     },
     {
+      label: "Protocol",
+      value: (
+        <DetailValue>{worker.protocol === "sv2" ? "Stratum V2" : "Stratum V1"}</DetailValue>
+      ),
+    },
+    {
       label: "Last seen",
       value: (
         <DetailValue>

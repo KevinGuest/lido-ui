@@ -51,6 +51,8 @@ export type Worker = {
   id: string;
   name: string;
   userAgent: string;
+  /** Stratum protocol for the live session. */
+  protocol: "sv1" | "sv2";
   address: string;
   sessionId: string;
   hashrate: number;
@@ -400,6 +402,7 @@ function buildMockWorkers(now = Date.now()): Worker[] {
     id: miner.id,
     name: miner.name,
     userAgent: miner.userAgent,
+    protocol: index % 5 === 0 ? "sv2" : "sv1",
     address: DEMO_ADDRESS,
     sessionId: miner.sessionId,
     hashrate: fluctuateHashrate(miner.hashrate, miner.phase, now),
