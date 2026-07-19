@@ -10,3 +10,7 @@ export function cn(...inputs: ClassValue[]) {
  */
 export const hoverLabelClassName =
   "rounded-md border border-transparent bg-foreground px-2 py-1 text-xs whitespace-nowrap text-background shadow-lg before:absolute before:left-1/2 before:top-full before:-translate-x-1/2 before:border-[5px] before:border-transparent before:border-t-foreground before:content-['']"
+
+/** Flip caret when the chip must sit below its trigger (e.g. under a clipping header). */
+export const hoverLabelBelowClassName =
+  "before:top-0 before:bottom-auto before:-translate-y-full before:border-t-transparent before:border-b-foreground"

@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { STRATUM_V1_PORT, STRATUM_V2_PORT, withStratumPort } from "@/lib/stratum-url";
-import { cn, hoverLabelClassName } from "@/lib/utils";
+import { cn, hoverLabelBelowClassName, hoverLabelClassName } from "@/lib/utils";
 
 function CopyRow({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
@@ -124,8 +124,9 @@ export function ConnectDialog({
                       SV1
                       <span
                         className={cn(
-                          "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+                          "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
                           hoverLabelClassName,
+                          hoverLabelBelowClassName,
                           "font-normal opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
                         )}
                       >
@@ -148,8 +149,9 @@ export function ConnectDialog({
                       SV2
                       <span
                         className={cn(
-                          "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+                          "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
                           hoverLabelClassName,
+                          hoverLabelBelowClassName,
                           "font-normal opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
                         )}
                       >
@@ -172,8 +174,9 @@ export function ConnectDialog({
                     />
                     <span
                       className={cn(
-                        "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+                        "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
                         hoverLabelClassName,
+                        hoverLabelBelowClassName,
                         "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
                       )}
                     >
