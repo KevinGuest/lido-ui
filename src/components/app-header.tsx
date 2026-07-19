@@ -3,7 +3,9 @@
 import { ArrowUpCircle } from "lucide-react";
 
 import { AppNav } from "@/components/app-nav";
+import { GitHubIcon } from "@/components/github-icon";
 import { LogoThemeToggle } from "@/components/logo-theme-toggle";
+import { GITHUB_REPO_URL } from "@/lib/app-meta";
 import type { NetworkInfo } from "@/lib/mock-data";
 import { cn, hoverLabelClassName, hoverLabelRightClassName } from "@/lib/utils";
 
@@ -56,9 +58,43 @@ export function AppHeader({
                   >
                     Update available
                   </span>
-                ) : null}
+                ) : (
+                  <span
+                    className={cn(
+                      "pointer-events-none absolute top-1/2 left-full z-20 ml-1 -translate-y-1/2",
+                      hoverLabelClassName,
+                      hoverLabelRightClassName,
+                      "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+                    )}
+                  >
+                    Update
+                  </span>
+                )}
               </button>
-            ) : null}
+            ) : (
+              <a
+                href={GITHUB_REPO_URL}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Lido on GitHub"
+                className={cn(
+                  "group relative inline-flex size-8 items-center justify-center rounded-md",
+                  "text-foreground transition-colors hover:bg-muted/40",
+                )}
+              >
+                <GitHubIcon className="size-4" />
+                <span
+                  className={cn(
+                    "pointer-events-none absolute top-1/2 left-full z-20 ml-1 -translate-y-1/2",
+                    hoverLabelClassName,
+                    hoverLabelRightClassName,
+                    "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+                  )}
+                >
+                  GitHub
+                </span>
+              </a>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>

@@ -29,6 +29,9 @@ const CHAIN_POLL_MS = 60_000;
 const BOOT_MS = 1100;
 const FADE_MS = 450;
 
+/** Once per tab session — returning from Settings must not replay the boot splash. */
+let bootSplashDone = false;
+
 export function HomeDashboard({
   initial,
   deployment,
@@ -39,8 +42,8 @@ export function HomeDashboard({
   stratumConfigured?: string;
 }) {
   const [dashboard, setDashboard] = useState(initial);
-  const [splashMounted, setSplashMounted] = useState(true);
-  const [splashOpaque, setSplashOpaque] = useState(true);
+  const [splashMounted, setSplashMounted] = useState(() => !bootSplashDone);
+  const [splashOpaque, setSplashOpaque] = useState(() => !bootSplashDone);
   const liveChain = initial.source === "mock";
   const update = useUpdateAvailability(deployment, { announce: !splashOpaque });
 
@@ -49,8 +52,15 @@ export function HomeDashboard({
   }, [initial]);
 
   useEffect(() => {
+    if (bootSplashDone) {
+      setSplashOpaque(false);
+      setSplashMounted(false);
+      return;
+    }
+
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduceMotion) {
+      bootSplashDone = true;
       setSplashOpaque(false);
       setSplashMounted(false);
       return;
@@ -66,10 +76,20 @@ export function HomeDashboard({
   useEffect(() => {
     if (splashOpaque || !splashMounted) return;
     const fadeId = window.setTimeout(() => {
+      bootSplashDone = true;
       setSplashMounted(false);
     }, FADE_MS);
     return () => window.clearTimeout(fadeId);
   }, [splashOpaque, splashMounted]);
+
+  // Leaving the dashboard after the splash has faded — skip it on the way back.
+  useEffect(() => {
+    return () => {
+      if (!splashOpaque) {
+        bootSplashDone = true;
+      }
+    };
+  }, [splashOpaque]);
 
   useEffect(() => {
     if (!liveChain) return;

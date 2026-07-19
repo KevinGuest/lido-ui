@@ -133,6 +133,12 @@ type LiveInfoResponse = {
   uptime?: string | Date;
   /** First pool start — persists across restarts for chart date range. */
   startedAt?: string | Date;
+  platform?: string;
+  sharesAccepted?: number;
+  sharesRejected?: number;
+  bestDifficulty?: number | string;
+  blocksFound?: number;
+  overallUptimeSeconds?: number;
   highScores?: Array<{
     bestDifficulty?: number | string;
     bestDifficultyUserAgent?: string;
@@ -522,6 +528,10 @@ function emptyLiveDashboard(): DashboardPayload {
     },
     difficultyAdjustment: null,
     uptimeSeconds: null,
+    overallUptimeSeconds: null,
+    platform: null,
+    sharesAccepted: 0,
+    sharesRejected: 0,
     sv2AuthorityPublicKey: null,
   };
 }
@@ -578,6 +588,7 @@ export async function getDashboard(): Promise<DashboardPayload> {
     0,
     ...(info.userAgents ?? []).map((row) => parseDifficulty(row.bestDifficulty)),
   );
+  const infoBest = parseDifficulty(info.bestDifficulty);
 
   const foundBlocks: FoundBlock[] = Array.isArray(pool.blocksFound)
     ? pool.blocksFound
@@ -594,14 +605,21 @@ export async function getDashboard(): Promise<DashboardPayload> {
   const sv2AuthorityPublicKey =
     sv2Info?.enabled && sv2Info.authorityPublicKey ? sv2Info.authorityPublicKey : null;
 
+  const blocksFoundCount =
+    typeof info.blocksFound === "number" && info.blocksFound > 0
+      ? info.blocksFound
+      : foundBlocks.length;
+
+  const bestDifficulty = Math.max(infoBest, highScoreBest, workerBest, userAgentBest);
+
   return {
     source: "live",
     pool: {
       totalHashRate: pool.totalHashRate,
       blockHeight: network.height || pool.blockHeight,
       totalMiners: pool.totalMiners ?? workers.length,
-      blocksFound: foundBlocks.length,
-      bestDifficulty: Math.max(highScoreBest, workerBest, userAgentBest),
+      blocksFound: blocksFoundCount,
+      bestDifficulty,
       fee: pool.fee ?? 0,
     },
     chart,
@@ -612,6 +630,11 @@ export async function getDashboard(): Promise<DashboardPayload> {
     network,
     difficultyAdjustment,
     uptimeSeconds: parsePoolUptimeSeconds(info.uptime),
+    overallUptimeSeconds:
+      typeof info.overallUptimeSeconds === "number" ? info.overallUptimeSeconds : null,
+    platform: info.platform?.trim() || null,
+    sharesAccepted: Number(info.sharesAccepted) || 0,
+    sharesRejected: Number(info.sharesRejected) || 0,
     sv2AuthorityPublicKey,
   };
 }

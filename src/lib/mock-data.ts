@@ -83,6 +83,12 @@ export type DashboardPayload = {
   network: NetworkInfo;
   difficultyAdjustment: DifficultyAdjustment | null;
   uptimeSeconds: number | null;
+  /** Cumulative process uptime across all Lido sessions. */
+  overallUptimeSeconds?: number | null;
+  /** Host OS label from the pool process (Linux, Windows, …). */
+  platform?: string | null;
+  sharesAccepted?: number;
+  sharesRejected?: number;
   /** Live pool SV2 authority pubkey for Connect (Noise auth). */
   sv2AuthorityPublicKey?: string | null;
 };
@@ -585,6 +591,10 @@ export function buildMockDashboard(now = Date.now()): DashboardPayload {
       expectedBlocks: 820,
     },
     uptimeSeconds: 86_400 * 7,
+    overallUptimeSeconds: 86_400 * 57,
+    platform: "Linux",
+    sharesAccepted: 512_840,
+    sharesRejected: 1_284,
     foundBlocks: [
       {
         height: blockHeight - 17_740,

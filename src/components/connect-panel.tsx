@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Check, Copy, DoorOpen, HardHat } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Check, Copy, DoorOpen, HardHat, RefreshCw } from "lucide-react";
 
 import { DialogMarquees } from "@/components/dialog-marquees";
 import { ModalOverlay } from "@/components/modal-overlay";
@@ -31,11 +31,13 @@ function CopyRow({
   label,
   value,
   copyValue,
+  trailing,
 }: {
   label: string;
   value: string;
   /** Text copied when different from display (e.g. loading placeholder). */
   copyValue?: string;
+  trailing?: ReactNode;
 }) {
   const [copied, setCopied] = useState(false);
   const payload = (copyValue ?? value).trim();
@@ -55,25 +57,28 @@ function CopyRow({
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="break-all font-mono text-sm leading-snug">{value}</p>
       </div>
-      <button
-        type="button"
-        aria-label={copied ? "Copied" : "Copy"}
-        title={copied ? "Copied" : "Copy"}
-        onClick={copy}
-        disabled={!canCopy}
-        className={cn(
-          "mt-0.5 shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors",
-          "hover:text-neutral-950 focus-visible:text-neutral-950",
-          "dark:hover:text-white dark:focus-visible:text-white",
-          "focus-visible:outline-none disabled:pointer-events-none disabled:opacity-30",
-        )}
-      >
-        {copied ? (
-          <Check className="size-4" strokeWidth={1.75} />
-        ) : (
-          <Copy className="size-4" strokeWidth={1.75} />
-        )}
-      </button>
+      <div className="mt-0.5 flex shrink-0 items-center gap-0.5">
+        {trailing}
+        <button
+          type="button"
+          aria-label={copied ? "Copied" : "Copy"}
+          title={copied ? "Copied" : "Copy"}
+          onClick={copy}
+          disabled={!canCopy}
+          className={cn(
+            "rounded-md p-1.5 text-muted-foreground transition-colors",
+            "hover:text-neutral-950 focus-visible:text-neutral-950",
+            "dark:hover:text-white dark:focus-visible:text-white",
+            "focus-visible:outline-none disabled:pointer-events-none disabled:opacity-30",
+          )}
+        >
+          {copied ? (
+            <Check className="size-4" strokeWidth={1.75} />
+          ) : (
+            <Copy className="size-4" strokeWidth={1.75} />
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -84,18 +89,48 @@ type Sv2InfoResponse = {
   enabled?: boolean;
   authorityPublicKey?: string;
   configured?: boolean;
+  source?: string | null;
+  rotatable?: boolean;
 };
 
-async function fetchSv2AuthorityPublicKey(): Promise<string> {
-  if (IS_DEMO) return DEMO_SV2_AUTHORITY_PUBLIC_KEY;
+async function fetchSv2Info(): Promise<Sv2InfoResponse> {
+  if (IS_DEMO) {
+    return {
+      enabled: true,
+      authorityPublicKey: DEMO_SV2_AUTHORITY_PUBLIC_KEY,
+      configured: true,
+      source: "demo",
+      rotatable: false,
+    };
+  }
 
   const response = await fetch("/api/info/sv2", { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`SV2 info failed (${response.status})`);
   }
-  const data = (await response.json()) as Sv2InfoResponse;
-  if (!data.enabled || !data.authorityPublicKey) {
-    return "";
+  return (await response.json()) as Sv2InfoResponse;
+}
+
+async function rotateSv2AuthorityKey(): Promise<string> {
+  if (IS_DEMO) {
+    throw new Error("Authority refresh is disabled in demo mode");
+  }
+  const response = await fetch("/api/info/sv2/authority/rotate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ confirm: "rotate" }),
+  });
+  const data = (await response.json().catch(() => ({}))) as Sv2InfoResponse & {
+    message?: string | string[];
+  };
+  if (!response.ok) {
+    const message = Array.isArray(data.message)
+      ? data.message.join(", ")
+      : data.message || `Rotate failed (${response.status})`;
+    throw new Error(message);
+  }
+  if (!data.authorityPublicKey) {
+    throw new Error("Rotate succeeded but no public key returned");
   }
   return data.authorityPublicKey;
 }
@@ -118,6 +153,8 @@ export function ConnectDialog({
     () => initialAuthorityPublicKey?.trim() || (IS_DEMO ? DEMO_SV2_AUTHORITY_PUBLIC_KEY : ""),
   );
   const [authorityLoading, setAuthorityLoading] = useState(false);
+  const [authorityRotatable, setAuthorityRotatable] = useState(!IS_DEMO);
+  const [authorityRotating, setAuthorityRotating] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -138,9 +175,10 @@ export function ConnectDialog({
 
     void (async () => {
       try {
-        const key = await fetchSv2AuthorityPublicKey();
+        const info = await fetchSv2Info();
         if (cancelled) return;
-        if (key) setAuthorityPublicKey(key);
+        if (info.authorityPublicKey) setAuthorityPublicKey(info.authorityPublicKey);
+        setAuthorityRotatable(Boolean(info.rotatable));
       } catch {
         if (cancelled) return;
         if (IS_DEMO && !authorityPublicKey) {
@@ -170,6 +208,27 @@ export function ConnectDialog({
   const authorityDisplay = authorityLoading && !authorityPublicKey
     ? "Loading…"
     : authorityPublicKey || "Unavailable — update Lido / check pool logs";
+
+  async function onRefreshAuthority() {
+    if (!authorityRotatable || authorityRotating || IS_DEMO) return;
+    const ok = window.confirm(
+      "Generate a new SV2 authority key?\n\n"
+        + "This stays fixed across Lido updates until you refresh again. "
+        + "You will need to paste the new key into every miner.",
+    );
+    if (!ok) return;
+
+    setAuthorityRotating(true);
+    try {
+      const next = await rotateSv2AuthorityKey();
+      setAuthorityPublicKey(next);
+      setAuthorityRotatable(true);
+    } catch (error) {
+      window.alert((error as Error).message || "Could not refresh authority key");
+    } finally {
+      setAuthorityRotating(false);
+    }
+  }
 
   return (
     <ModalOverlay open={open} onClose={onClose} label="Connect miners">
@@ -274,6 +333,28 @@ export function ConnectDialog({
                     label="SV2 Authority Public Key"
                     value={authorityDisplay}
                     copyValue={authorityPublicKey || undefined}
+                    trailing={
+                      authorityRotatable ? (
+                        <button
+                          type="button"
+                          aria-label="Refresh authority key"
+                          title="Refresh authority key"
+                          onClick={onRefreshAuthority}
+                          disabled={authorityRotating || authorityLoading}
+                          className={cn(
+                            "rounded-md p-1.5 text-muted-foreground transition-colors",
+                            "hover:text-neutral-950 focus-visible:text-neutral-950",
+                            "dark:hover:text-white dark:focus-visible:text-white",
+                            "focus-visible:outline-none disabled:pointer-events-none disabled:opacity-30",
+                          )}
+                        >
+                          <RefreshCw
+                            className={cn("size-4", authorityRotating && "animate-spin")}
+                            strokeWidth={1.75}
+                          />
+                        </button>
+                      ) : null
+                    }
                   />
                 ) : null}
               </div>
@@ -285,7 +366,7 @@ export function ConnectDialog({
                 />
                 <p className="text-sm text-muted-foreground">
                   {protocol === "sv2"
-                    ? "Use host:4444 plus this authority public key in your miner’s SV2 settings. Workers appear once they submit shares."
+                    ? "Use host:4444 plus this authority public key in your miner’s SV2 settings. The key stays the same across Lido updates unless you refresh it."
                     : "Workers appear automatically once they submit shares."}
                 </p>
               </div>

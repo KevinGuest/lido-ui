@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { DemoSiteBanner } from "@/components/demo-site-banner";
 import { ThemeInit } from "@/components/theme-init";
+import { ToastProvider } from "@/components/toast";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -47,10 +48,12 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ThemeInit />
-        <div id="lido-app">
-          {isDemoSite ? <DemoSiteBanner /> : null}
-          {children}
-        </div>
+        <ToastProvider offsetTopClassName={isDemoSite ? "top-14" : "top-4"}>
+          <div id="lido-app">
+            {isDemoSite ? <DemoSiteBanner /> : null}
+            {children}
+          </div>
+        </ToastProvider>
       </body>
     </html>
   );
