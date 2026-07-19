@@ -13,6 +13,8 @@ import {
 import { cn, hoverLabelClassName } from "@/lib/utils";
 
 const MAX_LINES = 500;
+const POLL_MS = 2500;
+const SSE_FAILS_BEFORE_POLL = 2;
 
 function levelClass(level: PoolLogLine["level"]): string {
   switch (level) {
@@ -25,6 +27,15 @@ function levelClass(level: PoolLogLine["level"]): string {
     default:
       return "text-muted-foreground";
   }
+}
+
+function mergeLogLines(current: PoolLogLine[], incoming: PoolLogLine[]): PoolLogLine[] {
+  if (incoming.length === 0) return current;
+  const byId = new Map<string, PoolLogLine>();
+  for (const line of current) byId.set(line.id, line);
+  for (const line of incoming) byId.set(line.id, line);
+  const next = [...byId.values()].sort((a, b) => a.ts - b.ts || a.id.localeCompare(b.id));
+  return next.length > MAX_LINES ? next.slice(next.length - MAX_LINES) : next;
 }
 
 export function SettingsLogsPanel() {
@@ -47,6 +58,27 @@ export function SettingsLogsPanel() {
     let cancelled = false;
     let source: EventSource | null = null;
     let demoTimer: number | undefined;
+    let pollTimer: number | undefined;
+    let sseFails = 0;
+
+    const startPolling = () => {
+      if (pollTimer != null) return;
+      source?.close();
+      source = null;
+      const tick = async () => {
+        try {
+          const recent = await fetchRecentPoolLogs(200);
+          if (cancelled) return;
+          setLines((current) => mergeLogLines(current, recent));
+          setError(null);
+        } catch (err) {
+          if (cancelled) return;
+          setError((err as Error).message || "Could not refresh logs");
+        }
+      };
+      void tick();
+      pollTimer = window.setInterval(() => void tick(), POLL_MS);
+    };
 
     void (async () => {
       try {
@@ -72,21 +104,23 @@ export function SettingsLogsPanel() {
       try {
         source = new EventSource("/api/logs/stream");
         source.onmessage = (event) => {
+          sseFails = 0;
           try {
             const line = JSON.parse(event.data) as PoolLogLine;
-            setLines((current) => {
-              const next = [...current, line];
-              return next.length > MAX_LINES ? next.slice(next.length - MAX_LINES) : next;
-            });
+            setLines((current) => mergeLogLines(current, [line]));
+            setError(null);
           } catch {
             // ignore malformed
           }
         };
         source.onerror = () => {
-          setError((prev) => prev ?? "Live stream disconnected — retrying…");
+          sseFails += 1;
+          if (sseFails >= SSE_FAILS_BEFORE_POLL) {
+            startPolling();
+          }
         };
-      } catch (err) {
-        setError((err as Error).message || "Could not open log stream");
+      } catch {
+        startPolling();
       }
     })();
 
@@ -94,6 +128,7 @@ export function SettingsLogsPanel() {
       cancelled = true;
       source?.close();
       if (demoTimer != null) window.clearInterval(demoTimer);
+      if (pollTimer != null) window.clearInterval(pollTimer);
     };
   }, [demo]);
 

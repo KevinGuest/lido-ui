@@ -65,18 +65,36 @@ export function SettingsPage({
         if (!response.ok || cancelled) return;
         const data = (await response.json()) as Partial<NetworkInfo> & {
           hashrate?: number;
+          blocks?: number;
+          networkhashps?: number;
+          blockmintxfee?: number;
+          currentblockweight?: number;
+          currentblocktx?: number;
+          pooledtx?: number;
+          next?: { height?: number };
         };
         if (cancelled) return;
         setNetwork({
-          height: Number(data.height) || 0,
-          nextHeight: data.nextHeight ?? null,
+          height: Number(data.height ?? data.blocks) || 0,
+          nextHeight:
+            data.nextHeight ??
+            (data.next?.height != null ? Number(data.next.height) : null),
           difficulty: Number(data.difficulty) || 0,
-          networkHashrate: Number(data.networkHashrate ?? data.hashrate) || 0,
+          networkHashrate:
+            Number(data.networkHashrate ?? data.hashrate ?? data.networkhashps) || 0,
           chain: data.chain || "main",
-          minFeeBtcKvB: Number(data.minFeeBtcKvB) || 0,
-          currentBlockWeight: data.currentBlockWeight ?? null,
-          currentBlockTx: data.currentBlockTx ?? null,
-          pooledTx: data.pooledTx ?? null,
+          minFeeBtcKvB: Number(data.minFeeBtcKvB ?? data.blockmintxfee) || 0,
+          currentBlockWeight:
+            data.currentBlockWeight ??
+            (data.currentblockweight == null
+              ? null
+              : Number(data.currentblockweight)),
+          currentBlockTx:
+            data.currentBlockTx ??
+            (data.currentblocktx == null ? null : Number(data.currentblocktx)),
+          pooledTx:
+            data.pooledTx ??
+            (data.pooledtx == null ? null : Number(data.pooledtx)),
         });
       } catch {
         // keep last
