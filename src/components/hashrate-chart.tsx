@@ -99,6 +99,29 @@ function filterByWindow(data: ChartPoint[], window: TimeWindow): ChartPoint[] {
   });
 }
 
+function seriesHasActivity(chart: ChartPoint[], window: TimeWindow): boolean {
+  return filterByWindow(chart, window).some((point) => (Number(point.data) || 0) > 0);
+}
+
+type ChartWorkerRef = {
+  id: string;
+  name: string;
+  hashrate?: number;
+  online?: boolean;
+};
+
+function isMinerOnline(
+  series: MinerChartSeries,
+  workers?: ChartWorkerRef[],
+): boolean {
+  if (!workers?.length) return true;
+  const worker = workers.find(
+    (entry) => entry.id === series.id || entry.name === series.name,
+  );
+  if (!worker) return true;
+  return worker.online !== false;
+}
+
 function formatTick(iso: string, spanMs: number) {
   const date = new Date(iso);
   if (spanMs <= 24 * 60 * 60 * 1000) {
@@ -744,12 +767,13 @@ function ChartDateRangePicker({
 export function HashrateChart({
   data,
   minerCharts = [],
+  workers,
   chartSince,
   liveHashrate = 0,
 }: {
   data: ChartPoint[];
   minerCharts?: MinerChartSeries[];
-  workers?: Array<{ id: string; name: string; hashrate?: number }>;
+  workers?: ChartWorkerRef[];
   chartSince: string;
   liveHashrate?: number;
 }) {
@@ -796,11 +820,31 @@ export function HashrateChart({
     ? Date.now()
     : new Date(customWindow.to).getTime();
 
+  const visibleMinerCharts = React.useMemo(() => {
+    return minerCharts.filter((series) => {
+      if (liveMode) return isMinerOnline(series, workers);
+      return seriesHasActivity(series.chart, window);
+    });
+  }, [minerCharts, workers, liveMode, window]);
+
+  React.useEffect(() => {
+    const visibleIds = new Set(visibleMinerCharts.map((series) => series.id));
+    setSelectedMinerIds((current) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of current) {
+        if (visibleIds.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : current;
+    });
+  }, [visibleMinerCharts]);
+
   const total = prepareTotalRows(data, window);
   const weekCompare = prepareWeekCompareRows(data, weekEndMs, chartSince);
   const selectedMinerCharts = React.useMemo(
-    () => minerCharts.filter((miner) => selectedMinerIds.has(miner.id)),
-    [minerCharts, selectedMinerIds],
+    () => visibleMinerCharts.filter((miner) => selectedMinerIds.has(miner.id)),
+    [visibleMinerCharts, selectedMinerIds],
   );
   const minerView = prepareMinerRows(selectedMinerCharts, window);
   const hasLiveHashrate = liveHashrate > 0;
@@ -898,7 +942,7 @@ export function HashrateChart({
               emptySelection={selectedMinerIds.size === 0}
             />
             <MinerSelectionBar
-              miners={minerCharts}
+              miners={visibleMinerCharts}
               selectedIds={selectedMinerIds}
               onToggle={toggleMiner}
               onClear={clearMiners}

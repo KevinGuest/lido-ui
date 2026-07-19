@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { DoorOpen, HardHat } from "lucide-react";
 
 import { DialogMarquees } from "@/components/dialog-marquees";
+import { ModalOverlay } from "@/components/modal-overlay";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -60,16 +61,7 @@ export function ConnectDialog({
   useEffect(() => {
     if (!open) return;
     setProtocol("sv1");
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open, onClose]);
+  }, [open]);
 
   const endpoint = useMemo(
     () =>
@@ -80,24 +72,11 @@ export function ConnectDialog({
     [protocol, stratumUrl],
   );
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Connect miners"
-    >
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-md"
-        aria-label="Close"
-        onClick={onClose}
-      />
-      <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-background lido-dialog-shell">
+    <ModalOverlay open={open} onClose={onClose} label="Connect miners">
+      <div className="flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-background lido-dialog-shell">
         <DialogMarquees text="Connect · Stratum · Point your rig" tone="connect">
-          <Card className="border-0 shadow-none">
+          <Card className="gap-4 border-0 py-4 shadow-none">
             <CardHeader>
               <CardTitle>Connect miners</CardTitle>
               <CardDescription>Point your miners to Lido.</CardDescription>
@@ -206,6 +185,6 @@ export function ConnectDialog({
           </Card>
         </DialogMarquees>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

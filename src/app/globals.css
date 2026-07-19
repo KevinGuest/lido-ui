@@ -174,6 +174,13 @@
   @apply border-0 shadow-xl ring-1 ring-black/5 dark:ring-white/10;
 }
 
+/* Modal open: blur the app root (more reliable than backdrop-filter alone). */
+#lido-app.lido-app-obscured {
+  filter: blur(8px);
+  pointer-events: none;
+  user-select: none;
+}
+
 /* Theme wipe: new theme reveals from the bottom up (View Transitions). */
 .lido-logo-theme-toggle {
   view-transition-name: lido-logo;
@@ -265,10 +272,38 @@
   animation: lido-marquee-reverse 60s linear infinite;
 }
 
+/* Update dialog strip — logo sky: sunrise (light) / sunset (dark). */
+.lido-marquee-update {
+  background: linear-gradient(
+    90deg,
+    #9ec5f0 0%,
+    #ffb3c1 28%,
+    #ff9a6b 58%,
+    #ffe08a 100%
+  );
+  color: #0a0a0a;
+}
+
+.dark .lido-marquee-update {
+  background: linear-gradient(
+    90deg,
+    #3a1540 0%,
+    #8b1e3a 28%,
+    #e85a1a 62%,
+    #f5c230 100%
+  );
+  color: #fff;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-lido-marquee,
   .animate-lido-marquee-reverse {
     animation: none;
+  }
+
+  #lido-app.lido-app-obscured {
+    filter: none;
+    opacity: 0.45;
   }
 
   ::view-transition-old(root),

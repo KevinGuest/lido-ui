@@ -56,3 +56,16 @@ export function resolveStratumEndpoint(
 
   return trimmed;
 }
+
+/**
+ * Umbrel App Store URL for the host you opened the dashboard on
+ * (IP, .local, Tailscale, etc.).
+ */
+export function resolveUmbrelAppStoreUrl(
+  browserHostname: string,
+  protocol: string = "http:",
+): string {
+  const host = browserHostname.trim() || "umbrel.local";
+  const proto = protocol === "https:" ? "https:" : "http:";
+  return `${proto}//${host}/app-store`;
+}

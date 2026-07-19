@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 
 import { DemoSiteBanner } from "@/components/demo-site-banner";
 import { ThemeInit } from "@/components/theme-init";
@@ -38,17 +37,20 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("font-sans", geist.variable, geistMono.variable)}
+      // Default dark matches THEME_BOOT_SCRIPT / product default — avoids light→dark splash flash.
+      className={cn("dark font-sans", geist.variable, geistMono.variable)}
     >
-      <body className="min-h-screen bg-background text-foreground antialiased">
-        <Script
-          id="lido-theme-boot"
-          strategy="beforeInteractive"
+      <head>
+        <script
           dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }}
         />
+      </head>
+      <body className="min-h-screen bg-background text-foreground antialiased">
         <ThemeInit />
-        {isDemoSite ? <DemoSiteBanner /> : null}
-        {children}
+        <div id="lido-app">
+          {isDemoSite ? <DemoSiteBanner /> : null}
+          {children}
+        </div>
       </body>
     </html>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Flame, List, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flame, List, MoreHorizontal, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -22,9 +28,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RelativeTime } from "@/components/relative-time";
+import { ModalOverlay } from "@/components/modal-overlay";
 import { formatUptime, hashSuffix, numberSuffix } from "@/lib/format";
 import { minerColor } from "@/lib/miner-colors";
+import { minerInfoUrl } from "@/lib/miner-info-url";
 import type { Worker } from "@/lib/mock-data";
+import {
+  useRememberedWorkers,
+  type ListedWorker,
+} from "@/lib/remembered-workers";
 import { cn, hoverLabelClassName } from "@/lib/utils";
 
 type SortKey = "name" | "hashrate" | "shares" | "bestDifficulty" | "uptime" | "blocks";
@@ -58,7 +70,10 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "blocks", label: "Blocks" },
 ];
 
-function compareWorkers(a: Worker, b: Worker, sort: SortKey) {
+function compareWorkers(a: ListedWorker, b: ListedWorker, sort: SortKey) {
+  // Online miners first, then the active sort.
+  if (a.online !== b.online) return a.online ? -1 : 1;
+
   switch (sort) {
     case "hashrate":
       return b.hashrate - a.hashrate || a.name.localeCompare(b.name);
@@ -104,6 +119,50 @@ function SharesCell({ accepted, rejected }: { accepted: number; rejected: number
   );
 }
 
+function MinerNameCell({ worker }: { worker: ListedWorker }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span
+        className={cn(
+          "size-2.5 shrink-0 rounded-[2px]",
+          !worker.online && "opacity-40",
+        )}
+        style={{ backgroundColor: minerColor(worker.name) }}
+        aria-hidden
+      />
+      <span className="min-w-0">
+        {worker.name}
+        {!worker.online ? (
+          <span className="ml-2 text-xs font-normal text-muted-foreground">
+            Offline
+          </span>
+        ) : null}
+      </span>
+    </span>
+  );
+}
+
+function MinerDeviceCell({ worker }: { worker: ListedWorker }) {
+  const label = worker.userAgent || "n/a";
+  const href = minerInfoUrl(worker);
+
+  if (!href) {
+    return <span className="text-muted-foreground">{label}</span>;
+  }
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+      onClick={(event) => event.stopPropagation()}
+    >
+      {label}
+    </a>
+  );
+}
+
 function DetailValue({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <span
@@ -126,18 +185,6 @@ function WorkerDialog({
   rank: number;
   onClose: () => void;
 }) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-
   const rows: { label: string; value: ReactNode }[] = [
     {
       label: "Rank",
@@ -237,19 +284,8 @@ function WorkerDialog({
   ];
 
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`${worker.name} details`}
-    >
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-md"
-        aria-label="Close"
-        onClick={onClose}
-      />
-      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl bg-background lido-dialog-shell">
+    <ModalOverlay open onClose={onClose} label={`${worker.name} details`}>
+      <div className="w-full max-w-lg overflow-hidden rounded-xl bg-background lido-dialog-shell">
         <Card className="border-0 shadow-none">
           <CardHeader>
             <CardTitle>{worker.name}</CardTitle>
@@ -281,18 +317,25 @@ function WorkerDialog({
           </CardContent>
         </Card>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }
 
 export function WorkersTable({
-  workers,
-  totalMiners,
+  workers: liveWorkers,
+  persistRemovals = true,
 }: {
   workers: Worker[];
-  totalMiners: number;
+  /** When false (demo), Remove works for the session only and resets on refresh. */
+  persistRemovals?: boolean;
+  /** @deprecated Online count is derived from remembered + live workers. */
+  totalMiners?: number;
 }) {
-  const [sort, setSort] = useState<SortKey>("name");
+  const { workers, onlineCount, removeWorker } = useRememberedWorkers(
+    liveWorkers,
+    { persistRemovals },
+  );
+  const [sort, setSort] = useState<SortKey>("hashrate");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [paginate, setPaginate] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
@@ -341,11 +384,11 @@ export function WorkersTable({
           <CardTitle className="flex items-center gap-2">
             Miners
             <Badge className="border-transparent bg-foreground font-normal tabular-nums text-background">
-              {totalMiners} online
+              {onlineCount}/{workers.length} online
             </Badge>
           </CardTitle>
           <CardDescription>
-            Connected workers show up here. Tap a row for full miner details.
+            Miners stay listed after they disconnect. Use the row menu to remove one.
           </CardDescription>
           <CardAction>
             <div className="relative z-20 flex flex-wrap items-center justify-end gap-1.5">
@@ -402,13 +445,16 @@ export function WorkersTable({
                 <TableHead className="text-right">Shares</TableHead>
                 <TableHead className="text-right">Uptime</TableHead>
                 <TableHead className="text-right">Last seen</TableHead>
+                <TableHead className="w-10">
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sorted.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="h-24 text-center text-sm text-muted-foreground"
                   >
                     No miner details yet. Open Connect to add miners — they show up here as they
@@ -419,35 +465,63 @@ export function WorkersTable({
                 visibleWorkers.map((worker) => (
                   <TableRow
                     key={worker.id}
-                    className="cursor-pointer"
+                    className={cn(
+                      "cursor-pointer",
+                      !worker.online && "opacity-60",
+                    )}
                     onClick={() => setSelectedId(worker.id)}
                   >
                     <TableCell className="font-medium">
-                      <span className="inline-flex items-center gap-2">
-                        <span
-                          className="size-2.5 shrink-0 rounded-[2px]"
-                          style={{ backgroundColor: minerColor(worker.name) }}
-                          aria-hidden
-                        />
-                        {worker.name}
-                      </span>
+                      <MinerNameCell worker={worker} />
                     </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {worker.userAgent || "n/a"}
+                    <TableCell>
+                      <MinerDeviceCell worker={worker} />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {hashSuffix(worker.hashrate)}
+                      {worker.online ? hashSuffix(worker.hashrate) : "—"}
                     </TableCell>
                     <TableCell className="text-right">
                       <SharesCell accepted={worker.shares} rejected={worker.rejectedShares} />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {worker.uptimeSeconds == null
+                      {!worker.online || worker.uptimeSeconds == null
                         ? "n/a"
                         : formatUptime(worker.uptimeSeconds)}
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       <RelativeTime iso={worker.lastSeen} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          nativeButton
+                          className={cn(
+                            "inline-flex size-8 items-center justify-center rounded-md",
+                            "text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground",
+                          )}
+                          aria-label={`Actions for ${worker.name}`}
+                          onClick={(event) => event.stopPropagation()}
+                          onPointerDown={(event) => event.stopPropagation()}
+                        >
+                          <MoreHorizontal className="size-4" strokeWidth={1.75} />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="min-w-36 w-auto"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              removeWorker(worker);
+                              if (selectedId === worker.id) setSelectedId(null);
+                            }}
+                          >
+                            Remove
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))

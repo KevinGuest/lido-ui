@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X } from "lucide-react";
 
+import { ModalOverlay } from "@/components/modal-overlay";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,19 +32,6 @@ export function BlocksFoundCard({
 }) {
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
   return (
     <>
       <button
@@ -57,74 +45,65 @@ export function BlocksFoundCard({
         </div>
       </button>
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Found blocks"
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/50 backdrop-blur-md"
-            aria-label="Close"
-            onClick={() => setOpen(false)}
-          />
-          <div className="relative z-10 w-full max-w-3xl overflow-hidden rounded-xl bg-background lido-dialog-shell">
-            <Card className="border-0 shadow-none">
-              <CardHeader>
-                <CardTitle>Blocks found</CardTitle>
-                <CardDescription>
-                  Solo blocks submitted by workers on this pool.
-                </CardDescription>
-                <CardAction>
-                  <Button
-                    type="button"
-                    size="icon-sm"
-                    variant="ghost"
-                    aria-label="Close"
-                    onClick={() => setOpen(false)}
-                  >
-                    <X />
-                  </Button>
-                </CardAction>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
+      <ModalOverlay
+        open={open}
+        onClose={() => setOpen(false)}
+        label="Found blocks"
+      >
+        <div className="w-full max-w-3xl overflow-hidden rounded-xl bg-background lido-dialog-shell">
+          <Card className="border-0 shadow-none">
+            <CardHeader className="px-6 pt-6">
+              <CardTitle>Blocks found</CardTitle>
+              <CardDescription>
+                Solo blocks submitted by workers on this pool.
+              </CardDescription>
+              <CardAction>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label="Close"
+                  onClick={() => setOpen(false)}
+                >
+                  <X />
+                </Button>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[120px]">Height</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead className="w-[160px]">Worker</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {blocks.length === 0 ? (
                     <TableRow>
-                      <TableHead className="w-[120px]">Height</TableHead>
-                      <TableHead>Address</TableHead>
-                      <TableHead className="w-[160px]">Worker</TableHead>
+                      <TableCell colSpan={3} className="h-20 text-center text-muted-foreground">
+                        No blocks found yet.
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {blocks.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={3} className="h-20 text-center text-muted-foreground">
-                          No blocks found yet.
+                  ) : (
+                    blocks.map((block) => (
+                      <TableRow key={`${block.height}-${block.worker}-${block.address}`}>
+                        <TableCell className="tabular-nums">
+                          {block.height.toLocaleString()}
                         </TableCell>
+                        <TableCell className="max-w-[280px] truncate font-mono text-xs">
+                          {block.address || "n/a"}
+                        </TableCell>
+                        <TableCell>{block.worker || "n/a"}</TableCell>
                       </TableRow>
-                    ) : (
-                      blocks.map((block) => (
-                        <TableRow key={`${block.height}-${block.worker}-${block.address}`}>
-                          <TableCell className="tabular-nums">
-                            {block.height.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="max-w-[280px] truncate font-mono text-xs">
-                            {block.address || "n/a"}
-                          </TableCell>
-                          <TableCell>{block.worker || "n/a"}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </div>
-      ) : null}
+      </ModalOverlay>
     </>
   );
 }

@@ -14,3 +14,7 @@ export const hoverLabelClassName =
 /** Flip caret when the chip must sit below its trigger (e.g. under a clipping header). */
 export const hoverLabelBelowClassName =
   "before:top-0 before:bottom-auto before:-translate-y-full before:border-t-transparent before:border-b-foreground"
+
+/** Chip to the right of the trigger; caret points left toward it. */
+export const hoverLabelRightClassName =
+  "before:top-1/2 before:left-0 before:right-auto before:bottom-auto before:-translate-x-full before:-translate-y-1/2 before:border-t-transparent before:border-b-transparent before:border-r-foreground"

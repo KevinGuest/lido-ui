@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useUpdateAvailability } from "@/hooks/use-update-availability";
 import type { DeploymentKind } from "@/lib/app-meta";
 import { formatUptime, hashSuffix, numberSuffix } from "@/lib/format";
 import { applyLiveChainSnapshot, fetchLiveChainSnapshot } from "@/lib/live-chain";
@@ -41,6 +42,7 @@ export function HomeDashboard({
   const [splashMounted, setSplashMounted] = useState(true);
   const [splashOpaque, setSplashOpaque] = useState(true);
   const liveChain = initial.source === "mock";
+  const update = useUpdateAvailability(deployment, { announce: !splashOpaque });
 
   useEffect(() => {
     setDashboard(initial);
@@ -84,7 +86,10 @@ export function HomeDashboard({
             ...next,
             workers: next.workers.map((worker, index) => ({
               ...worker,
-              lastSeen: new Date(Date.now() - (3_000 + index * 1_500)).toISOString(),
+              lastSeen:
+                worker.online === false
+                  ? worker.lastSeen
+                  : new Date(Date.now() - (3_000 + index * 1_500)).toISOString(),
             })),
           };
         });
@@ -142,8 +147,20 @@ export function HomeDashboard({
         aria-hidden={!showApp}
       >
         <AutoRefresh seconds={60} />
-        <UpdateNotifier deployment={deployment} />
-        <AppHeader network={network} stratumConfigured={stratumConfigured} />
+        <UpdateNotifier
+          dialogOpen={update.dialogOpen}
+          onCloseDialog={update.closeDialog}
+          release={update.release}
+          currentVersion={update.currentVersion}
+          deployment={deployment}
+        />
+        <AppHeader
+          network={network}
+          stratumConfigured={stratumConfigured}
+          showUpdate={update.hasUpdate}
+          highlightUpdate={update.hintOpen}
+          onUpdateClick={update.openDialog}
+        />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Card>
@@ -199,7 +216,11 @@ export function HomeDashboard({
           liveHashrate={pool.totalHashRate}
         />
 
-        <WorkersTable workers={workers} totalMiners={pool.totalMiners} />
+        <WorkersTable
+          workers={workers}
+          totalMiners={pool.totalMiners}
+          persistRemovals={dashboard.source !== "mock"}
+        />
 
         <p className="text-center text-sm text-muted-foreground">
           <span className="text-black dark:text-white">Lido</span> is a Fully

@@ -241,6 +241,7 @@ function poolWorkerToWorker(session: PoolWorker, fallbackAddress = ""): Worker {
     tempC: null,
     dashboardUrl: null,
     blocksFound: 0,
+    online: true,
   };
 }
 
@@ -333,6 +334,7 @@ async function loadMinerDevice(host: string): Promise<Worker | null> {
     tempC: tempC == null ? null : Number(tempC),
     dashboardUrl: dashboardUrlFor(ip),
     blocksFound: 0,
+    online: true,
   };
 }
 

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
 
 import { DialogMarquees } from "@/components/dialog-marquees";
+import { ModalOverlay } from "@/components/modal-overlay";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -50,35 +51,9 @@ export function DonateDialog({
   open: boolean;
   onClose: () => void;
 }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Donate to Public Pool"
-    >
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-md"
-        aria-label="Close"
-        onClick={onClose}
-      />
-      <div className="relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-background lido-dialog-shell">
+    <ModalOverlay open={open} onClose={onClose} label="Donate to Public Pool">
+      <div className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-background lido-dialog-shell">
         <DialogMarquees text="Support us · Keep Public Pool flowing · Thank you" tone="donate">
           <Card className="border-0 shadow-none">
             <CardHeader>
@@ -127,6 +102,6 @@ export function DonateDialog({
           </Card>
         </DialogMarquees>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

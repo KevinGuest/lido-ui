@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { FileText, History, Info, X } from "lucide-react";
 
+import { ModalOverlay } from "@/components/modal-overlay";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn, hoverLabelClassName } from "@/lib/utils";
 
@@ -91,19 +92,6 @@ export function HalvingCountdown({
     setNowMs(Date.now());
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
   if (!height || height < 0) return null;
 
   const blocksIntoEpoch = height % HALVING_INTERVAL;
@@ -167,20 +155,12 @@ export function HalvingCountdown({
         </CardContent>
       </Card>
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={pane === "about" ? "About Bitcoin halvings" : "Previous halvings"}
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/50 backdrop-blur-md"
-            aria-label="Close"
-            onClick={() => setOpen(false)}
-          />
-          <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl bg-background p-6 lido-dialog-shell sm:p-8">
+      <ModalOverlay
+        open={open}
+        onClose={() => setOpen(false)}
+        label={pane === "about" ? "About Bitcoin halvings" : "Previous halvings"}
+      >
+        <div className="w-full max-w-lg overflow-hidden rounded-xl bg-background px-6 pt-6 pb-6 lido-dialog-shell sm:px-8 sm:pt-8 sm:pb-8">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div className="min-w-0 space-y-1.5">
                 <h2 className="text-lg font-medium text-foreground">
@@ -258,9 +238,8 @@ export function HalvingCountdown({
                 </table>
               </div>
             )}
-          </div>
         </div>
-      ) : null}
+      </ModalOverlay>
     </>
   );
 }

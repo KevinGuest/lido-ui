@@ -64,7 +64,11 @@ export type Worker = {
   startTime: string | null;
   tempC: number | null;
   dashboardUrl: string | null;
+  /** Product / project page (website or repo). */
+  infoUrl?: string | null;
   blocksFound: number;
+  /** False when remembered but not in the current pool session list. */
+  online?: boolean;
 };
 
 export type DashboardPayload = {
@@ -125,6 +129,8 @@ type MockMinerSeed = {
   tempC: number;
   dashboardHost?: string;
   phase: number;
+  /** When false, shown as disconnected in the miners table. */
+  online?: boolean;
 };
 
 const MOCK_MINER_SEEDS: MockMinerSeed[] = [
@@ -320,6 +326,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     tempC: 56,
     dashboardHost: "192.168.1.61",
     phase: 13.3,
+    online: false,
   },
   {
     id: "15",
@@ -333,6 +340,88 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     uptimeHours: 73,
     tempC: 51,
     phase: 14.6,
+    online: false,
+  },
+  {
+    id: "16",
+    name: "bitaxe-hex",
+    userAgent: "Bitaxe Hex",
+    sessionId: "r6s8",
+    hashrate: 4.8e12,
+    shares: 22_140,
+    rejectedShares: 55,
+    bestDifficulty: 44_220_000,
+    uptimeHours: 38,
+    tempC: 62,
+    dashboardHost: "192.168.1.62",
+    phase: 15.2,
+  },
+  {
+    id: "17",
+    name: "nerdaxe-loft",
+    userAgent: "NerdAxe",
+    sessionId: "s7t9",
+    hashrate: 1.2e12,
+    shares: 10_440,
+    rejectedShares: 29,
+    bestDifficulty: 11_080_000,
+    uptimeHours: 45,
+    tempC: 58,
+    dashboardHost: "192.168.1.63",
+    phase: 16.1,
+  },
+  {
+    id: "18",
+    name: "avalon-nano-desk",
+    userAgent: "Avalon Nano 3S",
+    sessionId: "t8u0",
+    hashrate: 4.0e12,
+    shares: 16_220,
+    rejectedShares: 33,
+    bestDifficulty: 28_640_000,
+    uptimeHours: 67,
+    tempC: 46,
+    phase: 17.4,
+  },
+  {
+    id: "19",
+    name: "antminer-s21-pro",
+    userAgent: "Antminer S21 Pro",
+    sessionId: "u9v1",
+    hashrate: 2.34e14,
+    shares: 102_400,
+    rejectedShares: 82,
+    bestDifficulty: 1_420_000_000,
+    uptimeHours: 91,
+    tempC: 49,
+    phase: 18.3,
+  },
+  {
+    id: "20",
+    name: "bitaxe-gt",
+    userAgent: "Bitaxe GT",
+    sessionId: "v0w2",
+    hashrate: 2.4e12,
+    shares: 12_880,
+    rejectedShares: 41,
+    bestDifficulty: 19_550_000,
+    uptimeHours: 22,
+    tempC: 64,
+    dashboardHost: "192.168.1.64",
+    phase: 19.7,
+  },
+  {
+    id: "21",
+    name: "whatsminer-m60",
+    userAgent: "Whatsminer M60",
+    sessionId: "w1x3",
+    hashrate: 1.86e14,
+    shares: 74_120,
+    rejectedShares: 59,
+    bestDifficulty: 1_105_000_000,
+    uptimeHours: 78,
+    tempC: 53,
+    phase: 20.5,
   },
 ];
 
@@ -361,19 +450,29 @@ function buildMinerHashrateChart(
   baseHashrate: number,
   phase: number,
   now = Date.now(),
+  options?: { offlineSinceMs?: number },
 ): ChartPoint[] {
   const points = buildZeroChart(CHART_HOURS, CHART_INTERVAL_MINUTES, now);
   const steps = points.length;
   const liveHashrate = fluctuateHashrate(baseHashrate, phase, now);
+  const offlineSinceMs = options?.offlineSinceMs;
 
   return points.map((point, index) => {
+    const pointTs = new Date(point.label).getTime();
+    if (
+      offlineSinceMs != null &&
+      Number.isFinite(pointTs) &&
+      pointTs >= offlineSinceMs
+    ) {
+      return { ...point, data: 0 };
+    }
+
     const progress = index / Math.max(1, steps - 1);
     const ramp = 0.78 + 0.22 * progress;
-    const pointTs = new Date(point.label).getTime();
     const wobble = Number.isFinite(pointTs)
       ? chartWobbleMultiplier(phase, pointTs)
       : 1;
-    const isLast = index === steps - 1;
+    const isLast = index === steps - 1 && offlineSinceMs == null;
     const value = isLast ? liveHashrate : baseHashrate * ramp * wobble;
 
     return {
@@ -398,36 +497,55 @@ function sumCharts(series: MinerChartSeries[], now = Date.now()): ChartPoint[] {
 }
 
 function buildMockWorkers(now = Date.now()): Worker[] {
-  return MOCK_MINER_SEEDS.map((miner, index) => ({
-    id: miner.id,
-    name: miner.name,
-    userAgent: miner.userAgent,
-    protocol: index % 5 === 0 ? "sv2" : "sv1",
-    address: DEMO_ADDRESS,
-    sessionId: miner.sessionId,
-    hashrate: fluctuateHashrate(miner.hashrate, miner.phase, now),
-    shares: miner.shares,
-    rejectedShares: miner.rejectedShares,
-    bestDifficulty: miner.bestDifficulty,
-    uptimeSeconds: miner.uptimeHours * 3600,
-    lastSeen: new Date(now - (3_000 + index * 1_500)).toISOString(),
-    startTime: hoursAgo(miner.uptimeHours, now),
-    tempC: miner.tempC,
-    dashboardUrl: miner.dashboardHost ? `http://${miner.dashboardHost}` : null,
-    blocksFound: 0,
-  }));
+  return MOCK_MINER_SEEDS.map((miner, index) => {
+    const online = miner.online !== false;
+    return {
+      id: miner.id,
+      name: miner.name,
+      userAgent: miner.userAgent,
+      protocol: index % 5 === 0 ? "sv2" : "sv1",
+      address: DEMO_ADDRESS,
+      sessionId: miner.sessionId,
+      hashrate: online ? fluctuateHashrate(miner.hashrate, miner.phase, now) : 0,
+      shares: miner.shares,
+      rejectedShares: miner.rejectedShares,
+      bestDifficulty: miner.bestDifficulty,
+      uptimeSeconds: online ? miner.uptimeHours * 3600 : null,
+      lastSeen: online
+        ? new Date(now - (3_000 + index * 1_500)).toISOString()
+        : new Date(mockOfflineSinceMs(index, now)).toISOString(),
+      startTime: online ? hoursAgo(miner.uptimeHours, now) : null,
+      tempC: online ? miner.tempC : null,
+      dashboardUrl: miner.dashboardHost ? `http://${miner.dashboardHost}` : null,
+      blocksFound: 0,
+      online,
+    };
+  });
+}
+
+function mockOfflineSinceMs(index: number, now: number) {
+  return now - 86_400_000 * (2 + index * 0.15);
 }
 
 /** Coherent demo payload — worker hashrates, miner charts, and pool total all align. */
 export function buildMockDashboard(now = Date.now()): DashboardPayload {
-  const minerCharts: MinerChartSeries[] = MOCK_MINER_SEEDS.map((miner) => ({
-    id: miner.id,
-    name: miner.name,
-    chart: buildMinerHashrateChart(miner.hashrate, miner.phase, now),
-  }));
-  const chart = sumCharts(minerCharts, now);
+  const minerCharts: MinerChartSeries[] = MOCK_MINER_SEEDS.map((miner, index) => {
+    const online = miner.online !== false;
+    return {
+      id: miner.id,
+      name: miner.name,
+      chart: buildMinerHashrateChart(miner.hashrate, miner.phase, now, {
+        offlineSinceMs: online ? undefined : mockOfflineSinceMs(index, now),
+      }),
+    };
+  });
+  const onlineCharts = minerCharts.filter((_, index) => {
+    return MOCK_MINER_SEEDS[index]?.online !== false;
+  });
+  const chart = sumCharts(onlineCharts, now);
   const workers = buildMockWorkers(now);
-  const totalHashRate = workers.reduce((sum, worker) => sum + worker.hashrate, 0);
+  const onlineWorkers = workers.filter((worker) => worker.online !== false);
+  const totalHashRate = onlineWorkers.reduce((sum, worker) => sum + worker.hashrate, 0);
   const bestDifficulty = DEMO_BEST_DIFFICULTY;
   const blockHeight = 918_742;
 
@@ -436,7 +554,7 @@ export function buildMockDashboard(now = Date.now()): DashboardPayload {
     pool: {
       totalHashRate,
       blockHeight,
-      totalMiners: workers.length,
+      totalMiners: onlineWorkers.length,
       blocksFound: 1,
       bestDifficulty,
       fee: 0,
