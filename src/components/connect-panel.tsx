@@ -17,7 +17,21 @@ import {
 import { STRATUM_V1_PORT, STRATUM_V2_PORT, withStratumPort } from "@/lib/stratum-url";
 import { cn, hoverLabelBelowClassName, hoverLabelClassName } from "@/lib/utils";
 
-function CopyRow({ label, value }: { label: string; value: string }) {
+/** Spec test vector — demo/Pages only so the Connect UI stays complete. */
+const DEMO_SV2_AUTHORITY_PUBLIC_KEY =
+  "9bXiEd8boQVhq7WddEcERUL5tyyJVFYdU8th3HfbNXK3Yw6GRXh";
+
+const IS_DEMO = process.env.NEXT_PUBLIC_LIDO_DEMO === "true";
+
+function CopyRow({
+  label,
+  value,
+  copyDisabled = false,
+}: {
+  label: string;
+  value: string;
+  copyDisabled?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -36,7 +50,13 @@ function CopyRow({ label, value }: { label: string; value: string }) {
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="truncate font-mono text-sm">{value}</p>
       </div>
-      <Button type="button" size="sm" variant="outline" onClick={copy}>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={copy}
+        disabled={copyDisabled || !value}
+      >
         {copied ? "Copied" : "Copy"}
       </Button>
     </div>
@@ -44,6 +64,26 @@ function CopyRow({ label, value }: { label: string; value: string }) {
 }
 
 type StratumProtocol = "sv1" | "sv2";
+
+type Sv2InfoResponse = {
+  enabled?: boolean;
+  authorityPublicKey?: string;
+  configured?: boolean;
+};
+
+async function fetchSv2AuthorityPublicKey(): Promise<string> {
+  if (IS_DEMO) return DEMO_SV2_AUTHORITY_PUBLIC_KEY;
+
+  const response = await fetch("/api/info/sv2", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`SV2 info failed (${response.status})`);
+  }
+  const data = (await response.json()) as Sv2InfoResponse;
+  if (!data.enabled || !data.authorityPublicKey) {
+    return "";
+  }
+  return data.authorityPublicKey;
+}
 
 export function ConnectDialog({
   open,
@@ -57,10 +97,36 @@ export function ConnectDialog({
   usernameHint?: string;
 }) {
   const [protocol, setProtocol] = useState<StratumProtocol>("sv1");
+  const [authorityPublicKey, setAuthorityPublicKey] = useState("");
+  const [authorityLoading, setAuthorityLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setProtocol("sv1");
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+    setAuthorityLoading(true);
+
+    void (async () => {
+      try {
+        const key = await fetchSv2AuthorityPublicKey();
+        if (cancelled) return;
+        setAuthorityPublicKey(key);
+      } catch {
+        if (cancelled) return;
+        setAuthorityPublicKey(IS_DEMO ? DEMO_SV2_AUTHORITY_PUBLIC_KEY : "");
+      } finally {
+        if (!cancelled) setAuthorityLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   const endpoint = useMemo(
@@ -71,6 +137,10 @@ export function ConnectDialog({
       ),
     [protocol, stratumUrl],
   );
+
+  const authorityDisplay = authorityLoading
+    ? "Loading…"
+    : authorityPublicKey || "Unavailable — check pool logs";
 
   return (
     <ModalOverlay open={open} onClose={onClose} label="Connect miners">
@@ -170,6 +240,13 @@ export function ConnectDialog({
                 <CopyRow label="Stratum URL" value={endpoint} />
                 <CopyRow label="Username" value={usernameHint} />
                 <CopyRow label="Password" value="x" />
+                {protocol === "sv2" ? (
+                  <CopyRow
+                    label="SV2 Authority Public Key"
+                    value={authorityDisplay}
+                    copyDisabled={authorityLoading || !authorityPublicKey}
+                  />
+                ) : null}
               </div>
               <div className="flex items-start gap-3 rounded-xl border border-border/40 px-3 py-3 dark:border-border/50">
                 <HardHat
@@ -178,7 +255,9 @@ export function ConnectDialog({
                   aria-hidden="true"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Workers appear automatically once they submit shares.
+                  {protocol === "sv2"
+                    ? "Paste the authority public key into your miner’s SV2 settings. Workers appear once they submit shares."
+                    : "Workers appear automatically once they submit shares."}
                 </p>
               </div>
             </CardContent>
