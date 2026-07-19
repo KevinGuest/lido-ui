@@ -142,9 +142,16 @@ function MinerNameCell({ worker }: { worker: ListedWorker }) {
   );
 }
 
+function deviceLabel(userAgent: string | null | undefined): string {
+  const raw = (userAgent || "").trim();
+  if (!raw) return "n/a";
+  // Older SV2 sessions stored vendor with a redundant /sv2 suffix.
+  return raw.replace(/\/sv2$/i, "") || "n/a";
+}
+
 function MinerDeviceCell({ worker }: { worker: ListedWorker }) {
-  const label = worker.userAgent || "n/a";
-  const href = minerInfoUrl(worker);
+  const label = deviceLabel(worker.userAgent);
+  const href = minerInfoUrl({ ...worker, userAgent: label });
 
   if (!href) {
     return <span className="text-muted-foreground">{label}</span>;
@@ -221,7 +228,7 @@ function WorkerDialog({
         <span className="font-medium">{worker.name}</span>
       ),
     },
-    { label: "Device", value: <span>{worker.userAgent || "n/a"}</span> },
+    { label: "Device", value: <span>{deviceLabel(worker.userAgent)}</span> },
     {
       label: "Address",
       value: (
