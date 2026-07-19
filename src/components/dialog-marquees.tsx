@@ -38,6 +38,12 @@ export function MarqueeTrack({
   );
 }
 
+const TONE_BAND: Record<"connect" | "donate" | "update", string> = {
+  connect: "bg-[#1d59b3] text-black dark:text-white",
+  donate: "bg-red-500 text-black dark:text-white",
+  update: "bg-[#57F287] text-black dark:text-white",
+};
+
 export function DialogMarquees({
   text,
   tone,
@@ -47,13 +53,8 @@ export function DialogMarquees({
   tone: "connect" | "donate" | "update";
   children: ReactNode;
 }) {
-  const band =
-    tone === "connect"
-      ? "bg-[#1d59b3] text-white"
-      : tone === "update"
-        ? "bg-[#57F287] text-[#111111]"
-        : "bg-red-500 text-white";
-      
+  const band = TONE_BAND[tone];
+
   return (
     <>
       <div className={cn("py-1.5", band)}>

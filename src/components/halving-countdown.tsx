@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { FileText, History, Info, X } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { cn, hoverLabelClassName } from "@/lib/utils";
 
 const HALVING_INTERVAL = 210_000;
 const INITIAL_SUBSIDY_BTC = 50;
@@ -147,7 +147,13 @@ export function HalvingCountdown({
               className="absolute inset-y-0 left-0 rounded-sm bg-foreground/80 transition-[width] duration-500"
               style={{ width: `${progress}%` }}
             />
-            <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 rounded-md border border-border bg-background px-2 py-0.5 text-xs tabular-nums text-foreground opacity-0 shadow-lg transition-opacity group-hover/bar:opacity-100">
+            <span
+              className={cn(
+                "pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 -translate-x-1/2 px-2 py-0.5",
+                hoverLabelClassName,
+                "tabular-nums opacity-0 transition-opacity group-hover/bar:opacity-100",
+              )}
+            >
               {progress.toFixed(2)}%
             </span>
           </div>
@@ -174,7 +180,7 @@ export function HalvingCountdown({
             aria-label="Close"
             onClick={() => setOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl border border-border bg-background p-6 shadow-xl sm:p-8">
+          <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl bg-background p-6 lido-dialog-shell sm:p-8">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div className="min-w-0 space-y-1.5">
                 <h2 className="text-lg font-medium text-foreground">

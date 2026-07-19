@@ -42,9 +42,13 @@ import {
   minerColor,
   minerSeriesKey,
   TOTAL_HASHRATE_COLOR,
+  WEEK_COMPARE_PRIOR_COLOR,
 } from "@/lib/miner-colors";
 import type { ChartPoint, MinerChartSeries } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+
+const CHART_GRID_STROKE = "var(--chart-grid)";
+const CHART_CURSOR_STROKE = "var(--chart-cursor)";
 
 const totalChartConfig = {
   hashrate: {
@@ -179,7 +183,7 @@ const weekCompareConfig = {
   },
   lastWeek: {
     label: "Last week",
-    color: "oklch(0.72 0.1 250)",
+    color: WEEK_COMPARE_PRIOR_COLOR,
   },
 } satisfies ChartConfig;
 
@@ -343,7 +347,7 @@ function TotalHashrateChart({
   return (
     <ChartContainer config={totalChartConfig} className="aspect-auto h-64 w-full overflow-visible">
       <AreaChart accessibilityLayer data={rows} margin={{ left: 12, right: 8, top: 20, bottom: 4 }}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
+        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
         <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
         <YAxis
           tickLine={false}
@@ -391,7 +395,7 @@ function WeekCompareChart({ rows, flatZero }: { rows: ChartRow[]; flatZero: bool
   return (
     <ChartContainer config={weekCompareConfig} className="aspect-auto h-64 w-full overflow-visible">
       <AreaChart accessibilityLayer data={rows} margin={{ left: 12, right: 8, top: 20, bottom: 4 }}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
+        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
         <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
         <YAxis
           tickLine={false}
@@ -527,7 +531,7 @@ function MinersHashrateChart({
           setPinnedKey(null);
         }}
       >
-        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="oklch(1 0 0 / 10%)" />
+        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
         <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
         <YAxis
           tickLine={false}
@@ -539,7 +543,7 @@ function MinersHashrateChart({
         />
         <ChartTooltip
           shared
-          cursor={{ stroke: "oklch(1 0 0 / 20%)", strokeWidth: 1 }}
+          cursor={{ stroke: CHART_CURSOR_STROKE, strokeWidth: 1 }}
           content={({ active, payload, label }) => {
             const items = focusedKey
               ? payload?.filter((item) => item.dataKey === focusedKey)

@@ -70,7 +70,7 @@ export function BlocksFoundCard({
             aria-label="Close"
             onClick={() => setOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-3xl overflow-hidden rounded-xl border border-border bg-background shadow-xl">
+          <div className="relative z-10 w-full max-w-3xl overflow-hidden rounded-xl bg-background lido-dialog-shell">
             <Card className="border-0 shadow-none">
               <CardHeader>
                 <CardTitle>Blocks found</CardTitle>

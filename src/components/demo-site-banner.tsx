@@ -8,7 +8,7 @@ const BANNER_TEXT =
 export function DemoSiteBanner() {
   return (
     <div
-      className="bg-red-500 py-1.5 text-white"
+      className="bg-red-500 py-1.5 text-black dark:text-white"
       role="status"
       aria-label="This is a demo site. Do not connect miners here."
     >

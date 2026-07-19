@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { STRATUM_V1_PORT, STRATUM_V2_PORT, withStratumPort } from "@/lib/stratum-url";
-import { cn } from "@/lib/utils";
+import { cn, hoverLabelClassName } from "@/lib/utils";
 
 function CopyRow({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
@@ -95,7 +95,7 @@ export function ConnectDialog({
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border/50 bg-background shadow-xl">
+      <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-background lido-dialog-shell">
         <DialogMarquees text="Connect · Stratum · Point your rig" tone="connect">
           <Card className="border-0 shadow-none">
             <CardHeader>
@@ -124,9 +124,9 @@ export function ConnectDialog({
                       SV1
                       <span
                         className={cn(
-                          "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
-                          "rounded-md border border-border bg-background px-2 py-1 text-xs font-normal whitespace-nowrap text-foreground shadow-lg",
-                          "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+                          "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+                          hoverLabelClassName,
+                          "font-normal opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
                         )}
                       >
                         Stratum V1
@@ -148,9 +148,9 @@ export function ConnectDialog({
                       SV2
                       <span
                         className={cn(
-                          "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
-                          "rounded-md border border-border bg-background px-2 py-1 text-xs font-normal whitespace-nowrap text-foreground shadow-lg",
-                          "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+                          "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+                          hoverLabelClassName,
+                          "font-normal opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
                         )}
                       >
                         Stratum V2
@@ -172,8 +172,8 @@ export function ConnectDialog({
                     />
                     <span
                       className={cn(
-                        "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
-                        "rounded-md border border-border bg-background px-2 py-1 text-xs whitespace-nowrap text-foreground shadow-lg",
+                        "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+                        hoverLabelClassName,
                         "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
                       )}
                     >
@@ -184,12 +184,12 @@ export function ConnectDialog({
               </CardAction>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="rounded-xl border border-border/50 px-3">
+              <div className="rounded-xl border border-border/40 px-3 dark:border-border/50">
                 <CopyRow label="Stratum URL" value={endpoint} />
                 <CopyRow label="Username" value={usernameHint} />
                 <CopyRow label="Password" value="x" />
               </div>
-              <div className="flex items-start gap-3 rounded-xl border border-border/50 px-3 py-3">
+              <div className="flex items-start gap-3 rounded-xl border border-border/40 px-3 py-3 dark:border-border/50">
                 <HardHat
                   className="mt-0.5 size-4 shrink-0 text-amber-400"
                   strokeWidth={1.75}

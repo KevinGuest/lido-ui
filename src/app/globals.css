@@ -64,14 +64,35 @@
     --accent: oklch(0.94 0 0);
     --accent-foreground: oklch(0.145 0 0);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.145 0 0 / 12%);
-    --input: oklch(0.145 0 0 / 12%);
+    --border: oklch(0.145 0 0 / 8%);
+    --input: oklch(0.145 0 0 / 8%);
     --ring: oklch(0.55 0 0);
     --chart-1: oklch(0.3 0 0);
     --chart-2: oklch(0.4 0 0);
     --chart-3: oklch(0.55 0 0);
     --chart-4: oklch(0.7 0 0);
     --chart-5: oklch(0.85 0 0);
+    /* Hashrate charts: darker series for light backgrounds */
+    --chart-total: oklch(0.28 0 0);
+    --chart-week-prior: oklch(0.48 0.12 250);
+    --chart-grid: oklch(0.145 0 0 / 12%);
+    --chart-cursor: oklch(0.145 0 0 / 22%);
+    --miner-0: oklch(0.48 0.16 145);
+    --miner-1: oklch(0.46 0.14 220);
+    --miner-2: oklch(0.52 0.14 85);
+    --miner-3: oklch(0.5 0.16 25);
+    --miner-4: oklch(0.48 0.14 300);
+    --miner-5: oklch(0.46 0.12 180);
+    --miner-6: oklch(0.5 0.16 350);
+    --miner-7: oklch(0.5 0.1 95);
+    --miner-8: oklch(0.5 0.15 55);
+    --miner-9: oklch(0.44 0.12 260);
+    --miner-10: oklch(0.48 0.13 130);
+    --miner-11: oklch(0.48 0.12 15);
+    --miner-12: oklch(0.46 0.14 200);
+    --miner-13: oklch(0.5 0.12 40);
+    --miner-14: oklch(0.46 0.13 285);
+    --miner-15: oklch(0.48 0.11 110);
     --radius: 0.75rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
@@ -79,7 +100,7 @@
     --sidebar-primary-foreground: oklch(0.985 0 0);
     --sidebar-accent: oklch(0.94 0 0);
     --sidebar-accent-foreground: oklch(0.145 0 0);
-    --sidebar-border: oklch(0.145 0 0 / 12%);
+    --sidebar-border: oklch(0.145 0 0 / 8%);
     --sidebar-ring: oklch(0.55 0 0);
 }
 
@@ -107,6 +128,27 @@
     --chart-3: oklch(0.55 0 0);
     --chart-4: oklch(0.4 0 0);
     --chart-5: oklch(0.3 0 0);
+    /* Hashrate charts: lighter series for dark backgrounds */
+    --chart-total: oklch(0.95 0 0);
+    --chart-week-prior: oklch(0.72 0.1 250);
+    --chart-grid: oklch(1 0 0 / 10%);
+    --chart-cursor: oklch(1 0 0 / 20%);
+    --miner-0: oklch(0.82 0.16 145);
+    --miner-1: oklch(0.78 0.14 220);
+    --miner-2: oklch(0.84 0.14 85);
+    --miner-3: oklch(0.78 0.16 25);
+    --miner-4: oklch(0.78 0.14 300);
+    --miner-5: oklch(0.82 0.12 180);
+    --miner-6: oklch(0.8 0.16 350);
+    --miner-7: oklch(0.86 0.08 95);
+    --miner-8: oklch(0.76 0.15 55);
+    --miner-9: oklch(0.74 0.12 260);
+    --miner-10: oklch(0.83 0.13 130);
+    --miner-11: oklch(0.79 0.11 15);
+    --miner-12: oklch(0.77 0.14 200);
+    --miner-13: oklch(0.81 0.12 40);
+    --miner-14: oklch(0.75 0.13 285);
+    --miner-15: oklch(0.84 0.1 110);
     --sidebar: oklch(0.145 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
     --sidebar-primary: oklch(0.985 0 0);
@@ -125,6 +167,76 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+}
+
+/* Marquee dialog shells: no hard outline ringing the banner strips in light mode. */
+.lido-dialog-shell {
+  @apply border-0 shadow-xl ring-1 ring-black/5 dark:ring-white/10;
+}
+
+/* Theme wipe: new theme reveals from the bottom up (View Transitions). */
+.lido-logo-theme-toggle {
+  view-transition-name: lido-logo;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+  animation: lido-theme-wipe-up 0.52s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+::view-transition-group(lido-logo) {
+  animation: none;
+}
+
+::view-transition-old(lido-logo),
+::view-transition-new(lido-logo) {
+  animation: none;
+}
+
+@keyframes lido-theme-wipe-up {
+  from {
+    clip-path: inset(100% 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Slow start → fast finish Y-spin; face swaps mid-spin while velocity is high. */
+@keyframes lido-logo-spin-accelerate {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(1080deg);
+  }
+}
+
+.lido-logo-spin-accelerate {
+  animation: lido-logo-spin-accelerate 0.72s cubic-bezier(0.15, 0.05, 0.85, 1) both;
+}
+
+@keyframes lido-boot-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-lido-boot-spin {
+  animation: lido-boot-spin 1.1s linear infinite;
 }
 
 @keyframes lido-marquee {
@@ -157,5 +269,18 @@
   .animate-lido-marquee,
   .animate-lido-marquee-reverse {
     animation: none;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+
+  .lido-logo-spin-accelerate {
+    animation: none !important;
+  }
+
+  .animate-lido-boot-spin {
+    animation: none !important;
   }
 }

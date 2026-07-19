@@ -78,7 +78,7 @@ export function DonateDialog({
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border/50 bg-background shadow-xl">
+      <div className="relative z-10 flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-background lido-dialog-shell">
         <DialogMarquees text="Support us · Keep Public Pool flowing · Thank you" tone="donate">
           <Card className="border-0 shadow-none">
             <CardHeader>

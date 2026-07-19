@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { feeRateSats, hashSuffix, numberSuffix } from "@/lib/format";
 import type { NetworkInfo } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
+import { cn, hoverLabelClassName } from "@/lib/utils";
 
 function formatNetworkName(chain: string) {
   const key = chain.trim().toLowerCase();
@@ -96,13 +96,13 @@ export function NetworkHeightPill({ network }: { network: NetworkInfo }) {
         <span className="tabular-nums text-sm font-medium">
           {network.height.toLocaleString()}
         </span>
-        <span
-          className={cn(
-            "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
-            "rounded-md border border-border bg-background px-2 py-1 text-xs whitespace-nowrap text-foreground shadow-lg",
-            "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
-          )}
-        >
+          <span
+            className={cn(
+              "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+              hoverLabelClassName,
+              "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+            )}
+          >
           Block height
         </span>
       </button>
@@ -120,7 +120,7 @@ export function NetworkHeightPill({ network }: { network: NetworkInfo }) {
             aria-label="Close"
             onClick={() => setOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl border border-border bg-background shadow-xl">
+          <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl bg-background lido-dialog-shell">
             <Card className="border-0 shadow-none">
               <CardHeader>
                 <CardTitle>Node network info</CardTitle>

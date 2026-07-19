@@ -1,24 +1,27 @@
-/** Shared palette so chart series and miner table stay in sync. */
+/** Shared palette so chart series and miner table stay in sync.
+ * Values resolve via CSS vars in globals.css (light + dark).
+ */
 export const MINER_COLORS = [
-  "oklch(0.82 0.16 145)",
-  "oklch(0.78 0.14 220)",
-  "oklch(0.84 0.14 85)",
-  "oklch(0.78 0.16 25)",
-  "oklch(0.78 0.14 300)",
-  "oklch(0.82 0.12 180)",
-  "oklch(0.8 0.16 350)",
-  "oklch(0.86 0.08 95)",
-  "oklch(0.76 0.15 55)",
-  "oklch(0.74 0.12 260)",
-  "oklch(0.83 0.13 130)",
-  "oklch(0.79 0.11 15)",
-  "oklch(0.77 0.14 200)",
-  "oklch(0.81 0.12 40)",
-  "oklch(0.75 0.13 285)",
-  "oklch(0.84 0.1 110)",
+  "var(--miner-0)",
+  "var(--miner-1)",
+  "var(--miner-2)",
+  "var(--miner-3)",
+  "var(--miner-4)",
+  "var(--miner-5)",
+  "var(--miner-6)",
+  "var(--miner-7)",
+  "var(--miner-8)",
+  "var(--miner-9)",
+  "var(--miner-10)",
+  "var(--miner-11)",
+  "var(--miner-12)",
+  "var(--miner-13)",
+  "var(--miner-14)",
+  "var(--miner-15)",
 ] as const;
 
-export const TOTAL_HASHRATE_COLOR = "oklch(0.95 0 0)";
+export const TOTAL_HASHRATE_COLOR = "var(--chart-total)";
+export const WEEK_COMPARE_PRIOR_COLOR = "var(--chart-week-prior)";
 
 function hashName(name: string): number {
   let hash = 0;

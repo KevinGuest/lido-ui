@@ -2,9 +2,11 @@
 
 import { useLayoutEffect } from "react";
 
-export const THEME_STORAGE_KEY = "lido-theme";
+import { THEME_STORAGE_KEY } from "@/lib/theme";
 
-/** Apply saved theme before paint on the client (React 19-safe; no inline script). */
+export { THEME_STORAGE_KEY };
+
+/** Keep theme in sync after hydration (boot script already applied pre-paint). */
 export function ThemeInit() {
   useLayoutEffect(() => {
     try {

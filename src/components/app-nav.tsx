@@ -7,11 +7,10 @@ import { ConnectDialog } from "@/components/connect-panel";
 import { DonateDialog } from "@/components/donate-dialog";
 import { GitHubIcon } from "@/components/github-icon";
 import { NetworkHeightPill } from "@/components/network-height-card";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { GITHUB_RELEASES_URL } from "@/lib/app-meta";
 import type { NetworkInfo } from "@/lib/mock-data";
 import { resolveStratumEndpoint } from "@/lib/stratum-url";
-import { cn } from "@/lib/utils";
+import { cn, hoverLabelClassName } from "@/lib/utils";
 
 export function AppNav({
   stratumConfigured = "",
@@ -59,16 +58,14 @@ export function AppNav({
           />
           <span
             className={cn(
-              "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
-              "rounded-md border border-border bg-background px-2 py-1 text-xs whitespace-nowrap text-foreground shadow-lg",
+              "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+              hoverLabelClassName,
               "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
             )}
           >
             Connect
           </span>
         </button>
-
-        <ThemeToggle />
 
         <a
           href={GITHUB_RELEASES_URL}
@@ -82,8 +79,8 @@ export function AppNav({
           <GitHubIcon className="size-[1.15rem]" />
           <span
             className={cn(
-              "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
-              "rounded-md border border-border bg-background px-2 py-1 text-xs whitespace-nowrap text-foreground shadow-lg",
+              "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+              hoverLabelClassName,
               "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
             )}
           >
@@ -115,8 +112,8 @@ export function AppNav({
           />
           <span
             className={cn(
-              "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
-              "rounded-md border border-border bg-background px-2 py-1 text-xs whitespace-nowrap text-foreground shadow-lg",
+              "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+              hoverLabelClassName,
               "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
             )}
           >

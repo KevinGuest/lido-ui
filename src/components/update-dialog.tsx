@@ -68,7 +68,7 @@ export function UpdateDialog({
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-border/50 bg-background shadow-xl">
+      <div className="relative z-10 flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-background lido-dialog-shell">
         <DialogMarquees text="Lido update available" tone="update">
           <Card className="border-0 shadow-none">
             <CardHeader>
@@ -90,7 +90,7 @@ export function UpdateDialog({
               </CardAction>
             </CardHeader>
             <CardContent className="space-y-4 pb-5">
-              <div className="rounded-xl border border-border/50 px-4 py-4 text-left">
+              <div className="rounded-xl border border-border/40 px-4 py-4 text-left dark:border-border/50">
                 <p className="text-[10px] tracking-wide text-muted-foreground uppercase">
                   Latest release
                 </p>

@@ -25,7 +25,7 @@ import { RelativeTime } from "@/components/relative-time";
 import { formatUptime, hashSuffix, numberSuffix } from "@/lib/format";
 import { minerColor } from "@/lib/miner-colors";
 import type { Worker } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
+import { cn, hoverLabelClassName } from "@/lib/utils";
 
 type SortKey = "name" | "hashrate" | "shares" | "bestDifficulty" | "uptime" | "blocks";
 
@@ -108,7 +108,7 @@ function DetailValue({ children, className }: { children: ReactNode; className?:
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-full border border-border bg-transparent px-2.5 py-0.5 text-sm tabular-nums text-foreground",
+        "inline-flex max-w-full items-center gap-1.5 text-sm tabular-nums text-foreground",
         className,
       )}
     >
@@ -190,7 +190,7 @@ function WorkerDialog({
     {
       label: "Shares",
       value: (
-        <DetailValue className="flex-col items-end gap-0.5 rounded-lg py-1">
+        <DetailValue className="flex-col items-end gap-0.5">
           <span>{worker.shares.toLocaleString()} accepted</span>
           <span className="text-[11px] font-normal text-muted-foreground">
             {worker.rejectedShares.toLocaleString()} rejected ·{" "}
@@ -243,7 +243,7 @@ function WorkerDialog({
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl border border-border bg-background shadow-xl">
+      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-xl bg-background lido-dialog-shell">
         <Card className="border-0 shadow-none">
           <CardHeader>
             <CardTitle>{worker.name}</CardTitle>
@@ -330,7 +330,7 @@ export function WorkersTable({
 
   return (
     <>
-      <Card>
+      <Card className="overflow-visible">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             Miners
@@ -342,21 +342,29 @@ export function WorkersTable({
             Connected workers show up here. Tap a row for full miner details.
           </CardDescription>
           <CardAction>
-            <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <div className="relative z-20 flex flex-wrap items-center justify-end gap-1.5">
               <button
                 type="button"
                 onClick={togglePaginate}
                 aria-label={paginate ? "Turn off pagination" : "Paginate miners"}
                 aria-pressed={paginate}
-                title={paginate ? "Turn off pagination" : "Paginate"}
                 className={cn(
-                  "inline-flex items-center justify-center rounded-full border px-2.5 py-1 transition-colors",
+                  "group relative inline-flex items-center justify-center rounded-full border px-2.5 py-1 transition-colors",
                   paginate
                     ? "border-transparent bg-foreground text-background"
                     : "border-border text-muted-foreground hover:bg-muted/40 hover:text-foreground",
                 )}
               >
                 <List className="size-3.5" strokeWidth={1.75} />
+                <span
+                  className={cn(
+                    "pointer-events-none absolute bottom-full left-1/2 z-30 mb-2 -translate-x-1/2",
+                    hoverLabelClassName,
+                    "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+                  )}
+                >
+                  {paginate ? "Show all" : "Paginate"}
+                </span>
               </button>
               <span className="mx-0.5 hidden h-4 w-px bg-border sm:inline-block" />
               <span className="mr-0.5 text-xs text-muted-foreground">Sort</span>
