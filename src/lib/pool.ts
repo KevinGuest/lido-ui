@@ -522,6 +522,7 @@ function emptyLiveDashboard(): DashboardPayload {
     },
     difficultyAdjustment: null,
     uptimeSeconds: null,
+    sv2AuthorityPublicKey: null,
   };
 }
 
@@ -548,7 +549,7 @@ export async function getDashboard(): Promise<DashboardPayload> {
     return emptyLiveDashboard();
   }
 
-  const [pool, info, networkRaw, difficultyAdjustment, poolWorkers, devices] =
+  const [pool, info, networkRaw, difficultyAdjustment, poolWorkers, devices, sv2Info] =
     await Promise.all([
       fetchPool<LivePoolResponse>("/api/pool"),
       fetchPool<LiveInfoResponse>("/api/info"),
@@ -556,6 +557,9 @@ export async function getDashboard(): Promise<DashboardPayload> {
       loadDifficultyAdjustment(),
       loadPoolConnectedWorkers(),
       loadDevices(),
+      fetchPool<{ enabled?: boolean; authorityPublicKey?: string }>("/api/info/sv2").catch(
+        () => null,
+      ),
     ]);
 
   const chartSince = chartSinceIso(info);
@@ -587,6 +591,8 @@ export async function getDashboard(): Promise<DashboardPayload> {
     : [];
 
   const network = mapNetwork(networkRaw, pool.blockHeight);
+  const sv2AuthorityPublicKey =
+    sv2Info?.enabled && sv2Info.authorityPublicKey ? sv2Info.authorityPublicKey : null;
 
   return {
     source: "live",
@@ -606,5 +612,6 @@ export async function getDashboard(): Promise<DashboardPayload> {
     network,
     difficultyAdjustment,
     uptimeSeconds: parsePoolUptimeSeconds(info.uptime),
+    sv2AuthorityPublicKey,
   };
 }

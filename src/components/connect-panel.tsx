@@ -15,7 +15,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { STRATUM_V1_PORT, STRATUM_V2_PORT, withStratumPort } from "@/lib/stratum-url";
-import { cn, hoverLabelBelowClassName, hoverLabelClassName } from "@/lib/utils";
+import {
+  cn,
+  copyToClipboard,
+  hoverLabelBelowClassName,
+  hoverLabelClassName,
+} from "@/lib/utils";
 
 /** Spec test vector — demo/Pages only so the Connect UI stays complete. */
 const DEMO_SV2_AUTHORITY_PUBLIC_KEY =
@@ -26,37 +31,32 @@ const IS_DEMO = process.env.NEXT_PUBLIC_LIDO_DEMO === "true";
 function CopyRow({
   label,
   value,
-  copyDisabled = false,
+  copyValue,
 }: {
   label: string;
   value: string;
-  copyDisabled?: boolean;
+  /** Text copied when different from display (e.g. loading placeholder). */
+  copyValue?: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const payload = (copyValue ?? value).trim();
+  const canCopy = Boolean(payload);
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
-    } catch {
-      // Ignore clipboard errors.
-    }
+    if (!canCopy) return;
+    const ok = await copyToClipboard(payload);
+    if (!ok) return;
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1200);
   }
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 py-3 last:border-0">
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="truncate font-mono text-sm">{value}</p>
+        <p className="break-all font-mono text-sm">{value}</p>
       </div>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        onClick={copy}
-        disabled={copyDisabled || !value}
-      >
+      <Button type="button" size="sm" variant="outline" onClick={copy} disabled={!canCopy}>
         {copied ? "Copied" : "Copy"}
       </Button>
     </div>
@@ -90,14 +90,18 @@ export function ConnectDialog({
   onClose,
   stratumUrl,
   usernameHint = "<btc-address>.<worker-name>",
+  initialAuthorityPublicKey = null,
 }: {
   open: boolean;
   onClose: () => void;
   stratumUrl: string;
   usernameHint?: string;
+  initialAuthorityPublicKey?: string | null;
 }) {
   const [protocol, setProtocol] = useState<StratumProtocol>("sv1");
-  const [authorityPublicKey, setAuthorityPublicKey] = useState("");
+  const [authorityPublicKey, setAuthorityPublicKey] = useState(
+    () => initialAuthorityPublicKey?.trim() || (IS_DEMO ? DEMO_SV2_AUTHORITY_PUBLIC_KEY : ""),
+  );
   const [authorityLoading, setAuthorityLoading] = useState(false);
 
   useEffect(() => {
@@ -106,19 +110,27 @@ export function ConnectDialog({
   }, [open]);
 
   useEffect(() => {
+    const seeded = initialAuthorityPublicKey?.trim();
+    if (seeded) setAuthorityPublicKey(seeded);
+  }, [initialAuthorityPublicKey]);
+
+  useEffect(() => {
     if (!open) return;
 
     let cancelled = false;
-    setAuthorityLoading(true);
+    const hasSeed = Boolean(authorityPublicKey || initialAuthorityPublicKey?.trim());
+    if (!hasSeed) setAuthorityLoading(true);
 
     void (async () => {
       try {
         const key = await fetchSv2AuthorityPublicKey();
         if (cancelled) return;
-        setAuthorityPublicKey(key);
+        if (key) setAuthorityPublicKey(key);
       } catch {
         if (cancelled) return;
-        setAuthorityPublicKey(IS_DEMO ? DEMO_SV2_AUTHORITY_PUBLIC_KEY : "");
+        if (IS_DEMO && !authorityPublicKey) {
+          setAuthorityPublicKey(DEMO_SV2_AUTHORITY_PUBLIC_KEY);
+        }
       } finally {
         if (!cancelled) setAuthorityLoading(false);
       }
@@ -127,6 +139,8 @@ export function ConnectDialog({
     return () => {
       cancelled = true;
     };
+    // Refresh when dialog opens; seed covers first paint.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional open-only refresh
   }, [open]);
 
   const endpoint = useMemo(
@@ -138,9 +152,9 @@ export function ConnectDialog({
     [protocol, stratumUrl],
   );
 
-  const authorityDisplay = authorityLoading
+  const authorityDisplay = authorityLoading && !authorityPublicKey
     ? "Loading…"
-    : authorityPublicKey || "Unavailable — check pool logs";
+    : authorityPublicKey || "Unavailable — update Lido / check pool logs";
 
   return (
     <ModalOverlay open={open} onClose={onClose} label="Connect miners">
@@ -244,7 +258,7 @@ export function ConnectDialog({
                   <CopyRow
                     label="SV2 Authority Public Key"
                     value={authorityDisplay}
-                    copyDisabled={authorityLoading || !authorityPublicKey}
+                    copyValue={authorityPublicKey || undefined}
                   />
                 ) : null}
               </div>
@@ -256,7 +270,7 @@ export function ConnectDialog({
                 />
                 <p className="text-sm text-muted-foreground">
                   {protocol === "sv2"
-                    ? "Paste the authority public key into your miner’s SV2 settings. Workers appear once they submit shares."
+                    ? "Use host:4444 plus this authority public key in your miner’s SV2 settings. Workers appear once they submit shares."
                     : "Workers appear automatically once they submit shares."}
                 </p>
               </div>

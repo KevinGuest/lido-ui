@@ -83,6 +83,8 @@ export type DashboardPayload = {
   network: NetworkInfo;
   difficultyAdjustment: DifficultyAdjustment | null;
   uptimeSeconds: number | null;
+  /** Live pool SV2 authority pubkey for Connect (Noise auth). */
+  sv2AuthorityPublicKey?: string | null;
 };
 
 const DEMO_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
@@ -592,6 +594,7 @@ export function buildMockDashboard(now = Date.now()): DashboardPayload {
     ],
     workers,
     minerCharts,
+    sv2AuthorityPublicKey: "9bXiEd8boQVhq7WddEcERUL5tyyJVFYdU8th3HfbNXK3Yw6GRXh",
   };
 }
 

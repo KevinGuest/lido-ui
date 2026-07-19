@@ -12,6 +12,7 @@ export function AppHeader({
   subtitle = "#2BGA",
   network,
   stratumConfigured = "",
+  sv2AuthorityPublicKey = null,
   showUpdate = false,
   highlightUpdate = false,
   onUpdateClick,
@@ -20,6 +21,7 @@ export function AppHeader({
   subtitle?: string;
   network: NetworkInfo;
   stratumConfigured?: string;
+  sv2AuthorityPublicKey?: string | null;
   showUpdate?: boolean;
   /** Auto-show the Update hover chip for a few seconds. */
   highlightUpdate?: boolean;
@@ -61,7 +63,11 @@ export function AppHeader({
           <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
       </div>
-      <AppNav stratumConfigured={stratumConfigured} network={network} />
+      <AppNav
+        stratumConfigured={stratumConfigured}
+        network={network}
+        sv2AuthorityPublicKey={sv2AuthorityPublicKey}
+      />
     </header>
   );
 }

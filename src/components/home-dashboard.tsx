@@ -116,6 +116,7 @@ export function HomeDashboard({
     network,
     difficultyAdjustment,
     uptimeSeconds,
+    sv2AuthorityPublicKey,
   } = dashboard;
 
   const showApp = !splashOpaque;
@@ -157,6 +158,7 @@ export function HomeDashboard({
         <AppHeader
           network={network}
           stratumConfigured={stratumConfigured}
+          sv2AuthorityPublicKey={sv2AuthorityPublicKey}
           showUpdate={update.hasUpdate}
           highlightUpdate={update.hintOpen}
           onUpdateClick={update.openDialog}

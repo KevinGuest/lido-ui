@@ -15,9 +15,11 @@ import { cn, hoverLabelClassName } from "@/lib/utils";
 export function AppNav({
   stratumConfigured = "",
   network,
+  sv2AuthorityPublicKey = null,
 }: {
   stratumConfigured?: string;
   network: NetworkInfo;
+  sv2AuthorityPublicKey?: string | null;
 }) {
   const [connectOpen, setConnectOpen] = useState(false);
   const [donateOpen, setDonateOpen] = useState(false);
@@ -126,6 +128,7 @@ export function AppNav({
         open={connectOpen}
         onClose={() => setConnectOpen(false)}
         stratumUrl={stratumUrl}
+        initialAuthorityPublicKey={sv2AuthorityPublicKey}
       />
       <DonateDialog open={donateOpen} onClose={() => setDonateOpen(false)} />
     </>

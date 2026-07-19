@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { copyToClipboard } from "@/lib/utils";
 
 const LN_ADDRESS = "public_pool@strike.me";
 const ONCHAIN_ADDRESS = "bc1q99n3pu025yyu0jlywpmwzalyhm36tg5u37w20d";
@@ -23,13 +24,10 @@ function CopyableAddress({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
-    } catch {
-      // Ignore clipboard errors.
-    }
+    const ok = await copyToClipboard(value);
+    if (!ok) return;
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1200);
   }
 
   return (
