@@ -124,7 +124,7 @@ export function ConnectDialog({
                       SV1
                       <span
                         className={cn(
-                          "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
+                          "pointer-events-none absolute top-full left-1/2 z-20 mt-3 -translate-x-1/2",
                           hoverLabelClassName,
                           hoverLabelBelowClassName,
                           "font-normal opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
@@ -149,7 +149,7 @@ export function ConnectDialog({
                       SV2
                       <span
                         className={cn(
-                          "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
+                          "pointer-events-none absolute top-full left-1/2 z-20 mt-3 -translate-x-1/2",
                           hoverLabelClassName,
                           hoverLabelBelowClassName,
                           "font-normal opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
@@ -174,7 +174,7 @@ export function ConnectDialog({
                     />
                     <span
                       className={cn(
-                        "pointer-events-none absolute top-full left-1/2 z-20 mt-2 -translate-x-1/2",
+                        "pointer-events-none absolute top-full left-1/2 z-20 mt-3 -translate-x-1/2",
                         hoverLabelClassName,
                         hoverLabelBelowClassName,
                         "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
