@@ -1,10 +1,11 @@
 {
   "name": "lido-ui",
-  "version": "0.1.32",
+  "version": "0.1.33",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:pages": "node scripts/prepare-pages-export.mjs && next build",
     "start": "next start",
     "lint": "eslint"
   },
