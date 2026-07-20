@@ -366,7 +366,7 @@ export function ConnectDialog({
                 />
                 <p className="text-sm text-muted-foreground">
                   {protocol === "sv2"
-                    ? "Use host:4444 plus this authority public key in your miner’s SV2 settings. The key stays the same across Lido updates unless you refresh it."
+                    ? "Use host:2302 plus this authority public key in your miner’s SV2 settings. The key stays the same across Lido updates unless you refresh it."
                     : "Workers appear automatically once they submit shares."}
                 </p>
               </div>

@@ -17,7 +17,7 @@ Without `PUBLIC_POOL_API_URL`, the Umbrel/Docker build shows an empty live dashb
 | Env | Purpose |
 | --- | --- |
 | `PUBLIC_POOL_API_URL` | Pool HTTP API (e.g. `http://localhost:2019`) |
-| `PUBLIC_POOL_STRATUM_URL` | Shown in the Connect dialog (e.g. `umbrel.local:3333`) |
+| `PUBLIC_POOL_STRATUM_URL` | Shown in the Connect dialog (e.g. `umbrel.local:2301`) |
 | `MEMPOOL_API_URL` | Optional; difficulty adjustment |
 | `PUBLIC_POOL_ADDRESS` | Optional address-scoped fallback |
 | `MINER_HOSTS` / `SCAN_SUBNETS` | Optional AxeOS enrichment |

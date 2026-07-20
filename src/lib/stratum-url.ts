@@ -1,6 +1,7 @@
-const DEFAULT_STRATUM_PORT = 3333;
-export const STRATUM_V1_PORT = 3333;
-export const STRATUM_V2_PORT = 4444;
+/** Host ports miners use (Umbrel App Store / community package). */
+const DEFAULT_STRATUM_PORT = 2301;
+export const STRATUM_V1_PORT = 2301;
+export const STRATUM_V2_PORT = 2302;
 
 /** Hostnames that should be replaced with the browser host when they differ. */
 const GENERIC_STRATUM_HOSTS = new Set([
