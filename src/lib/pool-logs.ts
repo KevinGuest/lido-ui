@@ -1,3 +1,5 @@
+import { browserPoolApiPath } from "@/lib/pool-browser-api";
+
 export type PoolLogLevel = "log" | "warn" | "error" | "info";
 
 export type PoolLogLine = {
@@ -47,7 +49,10 @@ export function seedDemoLogLines(count = 24): PoolLogLine[] {
 export async function fetchRecentPoolLogs(limit = 200): Promise<PoolLogLine[]> {
   if (IS_DEMO) return seedDemoLogLines(Math.min(limit, 40));
 
-  const response = await fetch(`/api/logs?limit=${limit}`, { cache: "no-store" });
+  const response = await fetch(
+    `${browserPoolApiPath("/api/logs")}?limit=${limit}`,
+    { cache: "no-store" },
+  );
   if (!response.ok) {
     throw new Error(`Logs failed (${response.status})`);
   }

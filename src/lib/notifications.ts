@@ -1,3 +1,7 @@
+import { browserPoolApiPath } from "@/lib/pool-browser-api";
+
+const IS_DEMO = process.env.NEXT_PUBLIC_LIDO_DEMO === "true";
+
 export type NotificationEventKey =
   | "minerConnect"
   | "minerDisconnect"
@@ -277,12 +281,12 @@ export function normalizeNotificationSettings(
   };
 }
 
-const IS_DEMO = process.env.NEXT_PUBLIC_LIDO_DEMO === "true";
-
 export async function fetchNotificationSettings(): Promise<NotificationSettings> {
   if (IS_DEMO) return structuredClone(DEMO_NOTIFICATION_SETTINGS);
 
-  const response = await fetch("/api/notifications/settings", { cache: "no-store" });
+  const response = await fetch(browserPoolApiPath("/api/notifications/settings"), {
+    cache: "no-store",
+  });
   if (!response.ok) {
     throw new Error(`Notifications settings failed (${response.status})`);
   }
@@ -309,7 +313,7 @@ export async function saveNotificationSettings(
       },
     };
   }
-  const response = await fetch("/api/notifications/settings", {
+  const response = await fetch(browserPoolApiPath("/api/notifications/settings"), {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(settings),
@@ -410,7 +414,6 @@ function toDiscordEmbed(message: SampleMessage) {
     color: meta.color,
     fields,
     timestamp: new Date().toISOString(),
-    footer: { text: "Lido" },
   };
 }
 
@@ -617,7 +620,7 @@ export async function testNotificationChannel(input: {
 
     let apiAvailable = false;
     try {
-      const response = await fetch("/api/notifications/test", {
+      const response = await fetch(browserPoolApiPath("/api/notifications/test"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -656,7 +659,7 @@ export async function testNotificationChannel(input: {
 
   let apiAvailable = false;
   try {
-    const response = await fetch("/api/notifications/test", {
+    const response = await fetch(browserPoolApiPath("/api/notifications/test"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

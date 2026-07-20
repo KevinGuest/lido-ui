@@ -11,6 +11,7 @@ import { SettingsLogsPanel } from "@/components/settings-logs";
 import { SettingsNotificationsPanel } from "@/components/settings-notifications";
 import { UpdateNotifier } from "@/components/update-notifier";
 import { useUpdateAvailability } from "@/hooks/use-update-availability";
+import { browserPoolApiPath } from "@/lib/pool-browser-api";
 import type { DeploymentKind } from "@/lib/app-meta";
 import type { NetworkInfo } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
@@ -61,7 +62,9 @@ export function SettingsPage({
     let cancelled = false;
     void (async () => {
       try {
-        const response = await fetch("/api/network", { cache: "no-store" });
+        const response = await fetch(browserPoolApiPath("/api/network"), {
+          cache: "no-store",
+        });
         if (!response.ok || cancelled) return;
         const data = (await response.json()) as Partial<NetworkInfo> & {
           hashrate?: number;

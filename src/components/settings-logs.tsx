@@ -10,6 +10,7 @@ import {
   isDemoLogs,
   type PoolLogLine,
 } from "@/lib/pool-logs";
+import { browserPoolApiPath } from "@/lib/pool-browser-api";
 import { cn, hoverLabelClassName } from "@/lib/utils";
 
 const MAX_LINES = 500;
@@ -102,7 +103,7 @@ export function SettingsLogsPanel() {
       }
 
       try {
-        source = new EventSource("/api/logs/stream");
+        source = new EventSource(browserPoolApiPath("/api/logs/stream"));
         source.onmessage = (event) => {
           sseFails = 0;
           try {
@@ -191,9 +192,13 @@ export function SettingsLogsPanel() {
       </div>
 
       {error ? (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-200">
-          {error}
-        </p>
+        <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-200">
+          <p>{error}</p>
+          <p className="text-xs text-amber-200/80">
+            Settings logs load through the UI server when nginx routing is stale. Update
+            to the latest Lido package and restart if this persists.
+          </p>
+        </div>
       ) : null}
 
       <div

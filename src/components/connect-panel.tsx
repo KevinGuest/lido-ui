@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { browserPoolApiPath } from "@/lib/pool-browser-api";
 import { STRATUM_V1_PORT, STRATUM_V2_PORT, withStratumPort } from "@/lib/stratum-url";
 import {
   cn,
@@ -104,7 +105,7 @@ async function fetchSv2Info(): Promise<Sv2InfoResponse> {
     };
   }
 
-  const response = await fetch("/api/info/sv2", { cache: "no-store" });
+  const response = await fetch(browserPoolApiPath("/api/info/sv2"), { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`SV2 info failed (${response.status})`);
   }
@@ -115,7 +116,7 @@ async function rotateSv2AuthorityKey(): Promise<string> {
   if (IS_DEMO) {
     throw new Error("Authority refresh is disabled in demo mode");
   }
-  const response = await fetch("/api/info/sv2/authority/rotate", {
+  const response = await fetch(browserPoolApiPath("/api/info/sv2/authority/rotate"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ confirm: "rotate" }),
