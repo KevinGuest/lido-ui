@@ -34,11 +34,23 @@ const geistMono = Geist_Mono({
   variable: "--font-mono",
 });
 
+/** Favicon / PWA icons — generated from public/logo.png. */
+const siteIcons: Metadata["icons"] = {
+  icon: [
+    { url: "/favicon.ico", sizes: "48x48" },
+    { url: "/icon-48.png", type: "image/png", sizes: "48x48" },
+    { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+  ],
+  apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  shortcut: "/favicon.ico",
+};
+
 /** Umbrel / Docker: short app tab title only — no marketing SEO. */
 const appMetadata: Metadata = {
   title: SITE_NAME,
   description: "Solo Bitcoin mining pool dashboard.",
   applicationName: SITE_NAME,
+  icons: siteIcons,
   robots: { index: false, follow: false },
 };
 
@@ -56,6 +68,7 @@ const publicMetadata: Metadata = {
   creator: "Kevin Guest",
   publisher: SITE_NAME,
   category: "technology",
+  icons: siteIcons,
   alternates: {
     canonical: "/",
   },

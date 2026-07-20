@@ -311,8 +311,8 @@ export function HomeDashboard({
         />
 
         <p className="text-center text-sm text-muted-foreground">
-          <span className="text-black dark:text-white">Lido</span> is a Fully
-          Open Source Solo Bitcoin Mining Pool fork of{" "}
+          <span className="text-black dark:text-white">Lido</span> is a fully
+          open-source solo Bitcoin mining pool — a fork of{" "}
           <a
             href="https://web.public-pool.io"
             target="_blank"
@@ -321,7 +321,7 @@ export function HomeDashboard({
           >
             Public Pool
           </a>
-          .
+          , available on Umbrel. Try the demo and see if it&apos;s for you.
         </p>
       </div>
     </div>

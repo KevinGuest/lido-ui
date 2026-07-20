@@ -11,6 +11,7 @@ export function DemoSiteBanner() {
       className="bg-red-500 py-1.5 text-black dark:text-white"
       role="status"
       aria-label="This is a demo site. Do not connect miners here."
+      data-nosnippet
     >
       <MarqueeTrack text={BANNER_TEXT} />
     </div>
