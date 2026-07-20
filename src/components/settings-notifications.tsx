@@ -7,7 +7,6 @@ import { Bell } from "lucide-react";
 import { useToast } from "@/components/toast";
 import { ModalOverlay } from "@/components/modal-overlay";
 import {
-  DEMO_NOTIFICATION_SETTINGS,
   NOTIFICATION_EVENT_META,
   POOL_DIGEST_OPTIONS,
   emptyNotificationSettings,
@@ -339,11 +338,15 @@ export function SettingsNotificationsPanel() {
             telegram: next.telegram.configured ? CONFIGURED_SENTINEL : null,
           });
         }
-      } catch {
+      } catch (err) {
         if (!cancelled) {
-          setSettings(structuredClone(DEMO_NOTIFICATION_SETTINGS));
+          // Real Umbrel/self-hosted: never fall back to demo copy — show the API error.
+          setSettings(emptyNotificationSettings);
           setVerified({ discord: null, telegram: null });
-          toast("Using demo notification profile", "error");
+          toast(
+            (err as Error).message || "Could not load notification settings",
+            "error",
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
