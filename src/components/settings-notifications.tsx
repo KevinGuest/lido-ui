@@ -317,6 +317,7 @@ export function SettingsNotificationsPanel() {
   const { toast } = useToast();
   const [settings, setSettings] = useState<NotificationSettings>(emptyNotificationSettings);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<"discord" | "telegram" | null>(null);
   const [pane, setPane] = useState<NotifyPane>("overview");
@@ -333,6 +334,7 @@ export function SettingsNotificationsPanel() {
         const next = await fetchNotificationSettings();
         if (!cancelled) {
           setSettings(next);
+          setLoadError(null);
           setVerified({
             discord: next.discord.configured ? CONFIGURED_SENTINEL : null,
             telegram: next.telegram.configured ? CONFIGURED_SENTINEL : null,
@@ -340,13 +342,10 @@ export function SettingsNotificationsPanel() {
         }
       } catch (err) {
         if (!cancelled) {
-          // Real Umbrel/self-hosted: never fall back to demo copy — show the API error.
-          setSettings(emptyNotificationSettings);
-          setVerified({ discord: null, telegram: null });
-          toast(
-            (err as Error).message || "Could not load notification settings",
-            "error",
-          );
+          const message =
+            (err as Error).message || "Could not load notification settings";
+          setLoadError(message);
+          toast(message, "error");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -447,6 +446,20 @@ export function SettingsNotificationsPanel() {
 
   if (loading) {
     return <p className="text-sm text-muted-foreground">Loading notifications…</p>;
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-3 rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-4">
+        <p className="text-sm font-medium text-destructive">{loadError}</p>
+        <p className="text-sm text-muted-foreground">
+          The pool could not be reached from your browser, so these controls do not
+          reflect what is saved on the server. Alerts may still be active until
+          settings load and you save changes. Restart Lido after updating — the
+          latest package refreshes nginx routing on start.
+        </p>
+      </div>
+    );
   }
 
   const paneCopy =
