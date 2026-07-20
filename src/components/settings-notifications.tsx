@@ -48,6 +48,7 @@ function Field({
   disabled,
   type = "text",
   mono,
+  placeholder,
   className,
 }: {
   label: string;
@@ -56,6 +57,7 @@ function Field({
   disabled?: boolean;
   type?: string;
   mono?: boolean;
+  placeholder?: string;
   className?: string;
 }) {
   return (
@@ -65,6 +67,7 @@ function Field({
         type={type}
         value={value}
         disabled={disabled}
+        placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
           "w-full rounded-md border border-border/60 bg-transparent px-3 py-2 text-sm outline-none",
@@ -332,16 +335,8 @@ export function SettingsNotificationsPanel() {
         if (!cancelled) {
           setSettings(next);
           setVerified({
-            discord:
-              next.discord.configured && next.discord.webhookUrl.trim()
-                ? discordFingerprint(next.discord.webhookUrl)
-                : null,
-            telegram:
-              next.telegram.configured &&
-              next.telegram.botToken.trim() &&
-              next.telegram.chatId.trim()
-                ? telegramFingerprint(next.telegram.botToken, next.telegram.chatId)
-                : null,
+            discord: next.discord.configured ? CONFIGURED_SENTINEL : null,
+            telegram: next.telegram.configured ? CONFIGURED_SENTINEL : null,
           });
         }
       } catch {
@@ -359,10 +354,19 @@ export function SettingsNotificationsPanel() {
     };
   }, [toast]);
 
-  const discordFp = discordFingerprint(settings.discord.webhookUrl);
-  const telegramFp = telegramFingerprint(
-    settings.telegram.botToken,
-    settings.telegram.chatId,
+  const discordFp = credentialFingerprint(
+    "discord",
+    settings.discord.webhookUrl,
+    settings.discord.configured,
+  );
+  const telegramBlank =
+    !settings.telegram.botToken.trim() && !settings.telegram.chatId.trim();
+  const telegramFp = credentialFingerprint(
+    "telegram",
+    telegramBlank
+      ? ""
+      : `${settings.telegram.botToken}\0${settings.telegram.chatId}`,
+    settings.telegram.configured,
   );
   const discordVerified = verified.discord != null && verified.discord === discordFp;
   const telegramVerified =
@@ -381,16 +385,8 @@ export function SettingsNotificationsPanel() {
       const saved = await saveNotificationSettings(settings);
       setSettings(saved);
       setVerified({
-        discord:
-          saved.discord.enabled && saved.discord.webhookUrl.trim()
-            ? discordFingerprint(saved.discord.webhookUrl)
-            : verified.discord,
-        telegram:
-          saved.telegram.enabled &&
-          saved.telegram.botToken.trim() &&
-          saved.telegram.chatId.trim()
-            ? telegramFingerprint(saved.telegram.botToken, saved.telegram.chatId)
-            : verified.telegram,
+        discord: saved.discord.configured ? CONFIGURED_SENTINEL : null,
+        telegram: saved.telegram.configured ? CONFIGURED_SENTINEL : null,
       });
       toast(
         process.env.NEXT_PUBLIC_LIDO_DEMO === "true"
@@ -410,13 +406,21 @@ export function SettingsNotificationsPanel() {
     try {
       await testNotificationChannel({ channel, settings });
       if (channel === "discord") {
-        setVerified((v) => ({ ...v, discord: discordFingerprint(settings.discord.webhookUrl) }));
+        setVerified((v) => ({
+          ...v,
+          discord: credentialFingerprint(
+            "discord",
+            settings.discord.webhookUrl,
+            false,
+          ),
+        }));
       } else {
         setVerified((v) => ({
           ...v,
-          telegram: telegramFingerprint(
-            settings.telegram.botToken,
-            settings.telegram.chatId,
+          telegram: credentialFingerprint(
+            "telegram",
+            `${settings.telegram.botToken}\0${settings.telegram.chatId}`,
+            false,
           ),
         }));
       }
@@ -582,6 +586,11 @@ export function SettingsNotificationsPanel() {
                   label="Webhook URL"
                   value={settings.discord.webhookUrl}
                   disabled={!settings.enabled}
+                  placeholder={
+                    settings.discord.configured
+                      ? "Saved on server — paste a new URL to replace"
+                      : "https://discord.com/api/webhooks/…"
+                  }
                   onChange={(webhookUrl) => {
                     setVerified((v) => ({ ...v, discord: null }));
                     setSettings((s) => ({
@@ -594,7 +603,9 @@ export function SettingsNotificationsPanel() {
                 />
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {discordVerified ? (
-                    <span className="text-xs text-emerald-400">Tested</span>
+                    <span className="text-xs text-emerald-400">
+                      {settings.discord.webhookUrl.trim() ? "Tested" : "Saved"}
+                    </span>
                   ) : null}
                   <button
                     type="button"
@@ -670,6 +681,11 @@ export function SettingsNotificationsPanel() {
                     label="Bot token"
                     value={settings.telegram.botToken}
                     disabled={!settings.enabled}
+                    placeholder={
+                      settings.telegram.configured
+                        ? "Saved on server — paste a new token to replace"
+                        : undefined
+                    }
                     onChange={(botToken) => {
                       setVerified((v) => ({ ...v, telegram: null }));
                       setSettings((s) => ({
@@ -684,6 +700,11 @@ export function SettingsNotificationsPanel() {
                     label="Chat ID"
                     value={settings.telegram.chatId}
                     disabled={!settings.enabled}
+                    placeholder={
+                      settings.telegram.configured
+                        ? "Saved on server — paste a new chat ID to replace"
+                        : undefined
+                    }
                     onChange={(chatId) => {
                       setVerified((v) => ({ ...v, telegram: null }));
                       setSettings((s) => ({
@@ -691,12 +712,17 @@ export function SettingsNotificationsPanel() {
                         telegram: { ...s.telegram, chatId },
                       }));
                     }}
+                    type="password"
                     mono
                   />
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {telegramVerified ? (
-                    <span className="text-xs text-emerald-400">Tested</span>
+                    <span className="text-xs text-emerald-400">
+                      {settings.telegram.botToken.trim() || settings.telegram.chatId.trim()
+                        ? "Tested"
+                        : "Saved"}
+                    </span>
                   ) : null}
                   <button
                     type="button"
@@ -764,10 +790,15 @@ export function SettingsNotificationsPanel() {
   );
 }
 
-function discordFingerprint(webhookUrl: string): string {
-  return webhookUrl.trim();
-}
+const CONFIGURED_SENTINEL = "__configured__";
 
-function telegramFingerprint(botToken: string, chatId: string): string {
-  return `${botToken.trim()}\0${chatId.trim()}`;
+/** Empty fields + configured on server → treat as already verified until edited. */
+function credentialFingerprint(
+  _channel: "discord" | "telegram",
+  value: string,
+  configured: boolean,
+): string {
+  const trimmed = value.trim();
+  if (!trimmed && configured) return CONFIGURED_SENTINEL;
+  return trimmed;
 }

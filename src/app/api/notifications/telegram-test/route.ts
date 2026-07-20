@@ -10,10 +10,14 @@ type Body = {
 };
 
 /**
- * Demo / Pages fallback: Telegram Bot API blocks browser CORS, so the UI
- * posts here and we forward a single connection-ok message server-side.
+ * Demo-only: Telegram Bot API blocks browser CORS, so the mock UI posts here.
+ * Disabled in Umbrel / production Docker builds (pool handles tests instead).
  */
 export async function POST(request: Request) {
+  if (process.env.NEXT_PUBLIC_LIDO_DEMO !== "true") {
+    return NextResponse.json({ message: "Not available" }, { status: 404 });
+  }
+
   let body: Body;
   try {
     body = (await request.json()) as Body;

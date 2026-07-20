@@ -434,6 +434,7 @@ async function testDiscordDirect(
   webhookUrl: string,
   avatarTheme: "dark" | "light",
 ): Promise<void> {
+  assertDiscordWebhookUrlClient(webhookUrl);
   const response = await fetch(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -445,7 +446,69 @@ async function testDiscordDirect(
   });
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(text || `Discord test failed (${response.status})`);
+    throw new Error(formatDiscordWebhookError(text, response.status));
+  }
+}
+
+/** Turn Discord API JSON / status into short UI copy. */
+function formatDiscordWebhookError(raw: unknown, status?: number): string {
+  let message = "";
+  let code: number | undefined;
+
+  if (typeof raw === "string" && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw) as { message?: unknown; code?: unknown };
+      if (typeof parsed.message === "string") message = parsed.message;
+      if (typeof parsed.code === "number") code = parsed.code;    } catch {
+      message = raw.trim();
+    }
+  } else if (raw && typeof raw === "object") {
+    const obj = raw as { message?: unknown; code?: unknown };
+    if (typeof obj.message === "string") message = obj.message;
+    if (typeof obj.code === "number") code = obj.code;
+  }
+
+  if (code === 10015 || /unknown webhook/i.test(message)) {
+    return "That Discord webhook was deleted or is invalid. Create a new one and paste it here.";
+  }
+  if (code === 50027 || /invalid webhook token/i.test(message)) {
+    return "That Discord webhook token is invalid. Create a new webhook and paste the full URL.";
+  }
+  if (status === 401 || status === 403 || /unauthorized|forbidden/i.test(message)) {
+    return "Discord rejected this webhook. Check the URL or create a new one.";
+  }
+  if (status === 404) {
+    return "Discord webhook not found. It may have been deleted — create a new one.";
+  }
+  if (message && !message.trim().startsWith("{")) {
+    return message.length > 160 ? `${message.slice(0, 157)}…` : message;
+  }
+  return status
+    ? `Discord webhook test failed (${status})`
+    : "Discord webhook test failed";
+}
+
+function assertDiscordWebhookUrlClient(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    throw new Error("Discord webhook URL is invalid");
+  }
+  if (parsed.protocol !== "https:") {
+    throw new Error("Discord webhook must use https");
+  }
+  const host = parsed.hostname.toLowerCase();
+  const allowed =
+    host === "discord.com" ||
+    host === "discordapp.com" ||
+    host === "canary.discord.com" ||
+    host === "ptb.discord.com";
+  if (!allowed) {
+    throw new Error("Discord webhook must be a discord.com URL");
+  }
+  if (!parsed.pathname.startsWith("/api/webhooks/")) {
+    throw new Error("Discord webhook path looks wrong");
   }
 }
 
@@ -572,7 +635,9 @@ export async function testNotificationChannel(input: {
         const message = Array.isArray(body.message)
           ? body.message.join(", ")
           : body.message;
-        throw new Error(message || `Discord test failed (${response.status})`);
+        throw new Error(
+          formatDiscordWebhookError(message, response.status),
+        );
       }
     } catch (error) {
       if (apiAvailable) throw error;
