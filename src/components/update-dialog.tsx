@@ -58,7 +58,7 @@ export function UpdateDialog({
 
   return (
     <ModalOverlay open={open} onClose={onClose} label="Lido update available">
-      <div className="w-full max-w-[22rem] overflow-hidden rounded-2xl bg-background lido-dialog-shell">
+      <div className="w-[min(100%,22rem)] min-w-0 overflow-hidden rounded-2xl bg-background lido-dialog-shell">
         <DialogMarquees text="Lido" tone="update" showBottom={false}>
           <Card className="gap-0 border-0 py-0 shadow-none">
             <CardHeader className="px-6 pt-6 pb-3">

@@ -94,8 +94,45 @@ export type DashboardPayload = {
 };
 
 const DEMO_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
-const CHART_HOURS = 168;
-const CHART_INTERVAL_MINUTES = 10;
+
+/**
+ * Fixed “process started” anchors so mock uptime advances like a real pool.
+ * Session = current process (dashboard card); lifetime = all sessions (Settings → Info).
+ * Avoid round week/month landmarks — looks staged.
+ */
+const MOCK_SESSION_STARTED_MS = Date.UTC(2026, 5, 26, 14, 27, 53); // Jun 26 → ~3+ weeks
+const MOCK_LIFETIME_STARTED_MS = Date.UTC(2026, 2, 8, 11, 4, 18); // Mar 8 → ~4+ months
+
+export function mockSessionUptimeSeconds(now = Date.now()): number {
+  return Math.max(0, Math.floor((now - MOCK_SESSION_STARTED_MS) / 1000));
+}
+
+export function mockLifetimeUptimeSeconds(now = Date.now()): number {
+  return Math.max(0, Math.floor((now - MOCK_LIFETIME_STARTED_MS) / 1000));
+}
+
+function mockWorkerUptimeSeconds(
+  sessionFraction: number,
+  index: number,
+  phase: number,
+  now: number,
+): number {
+  const session = mockSessionUptimeSeconds(now);
+  const fraction = Math.min(1, Math.max(0, sessionFraction));
+  const target = Math.floor(session * fraction);
+  // Uneven minutes so the UI never lands on a round “Nd 0h”.
+  const jitter = (((phase * 17 + index * 13) % 53) + 7) * 60 + (((index * 29 + phase * 7) % 47) + 5);
+  return Math.max(0, Math.min(session, Math.max(0, target - jitter)));
+}
+
+/** Chart window matches pool session length (not a fixed 7d that truncates veterans). */
+function mockChartWindow(now = Date.now()): { hours: number; intervalMinutes: number } {
+  const sessionHours = Math.max(24, Math.ceil(mockSessionUptimeSeconds(now) / 3600));
+  const hours = Math.min(sessionHours, 40 * 24);
+  const intervalMinutes = hours > 20 * 24 ? 60 : hours > 10 * 24 ? 30 : 10;
+  return { hours, intervalMinutes };
+}
+
 /** Pool high score shown on the demo dashboard (~4.20T). */
 const DEMO_BEST_DIFFICULTY = 4.2e12;
 
@@ -133,7 +170,11 @@ type MockMinerSeed = {
   shares: number;
   rejectedShares: number;
   bestDifficulty: number;
-  uptimeHours: number;
+  /**
+   * How long this worker has been on the *current* pool session (0–1).
+   * 1 ≈ since process start (~pool uptime); smaller = joined later.
+   */
+  sessionFraction: number;
   tempC: number;
   dashboardHost?: string;
   phase: number;
@@ -151,7 +192,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 18_420,
     rejectedShares: 41,
     bestDifficulty: 68_274_102,
-    uptimeHours: 72,
+    sessionFraction: 0.96,
     tempC: 58,
     dashboardHost: "192.168.1.51",
     phase: 0.2,
@@ -165,7 +206,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 14_880,
     rejectedShares: 61,
     bestDifficulty: 41_002_110,
-    uptimeHours: 48,
+    sessionFraction: 0.74,
     tempC: 61,
     dashboardHost: "192.168.1.52",
     phase: 1.1,
@@ -179,7 +220,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 26_140,
     rejectedShares: 39,
     bestDifficulty: 118_440_200,
-    uptimeHours: 120,
+    sessionFraction: 0.985,
     tempC: 49,
     dashboardHost: "192.168.1.53",
     phase: 2.4,
@@ -193,7 +234,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 11_640,
     rejectedShares: 79,
     bestDifficulty: 12_845_023,
-    uptimeHours: 26,
+    sessionFraction: 0.18,
     tempC: 63,
     dashboardHost: "192.168.1.54",
     phase: 3.6,
@@ -207,7 +248,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 13_220,
     rejectedShares: 44,
     bestDifficulty: 9_812_004,
-    uptimeHours: 64,
+    sessionFraction: 0.88,
     tempC: 57,
     dashboardHost: "192.168.1.55",
     phase: 4.2,
@@ -221,7 +262,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 15_760,
     rejectedShares: 46,
     bestDifficulty: 18_331_900,
-    uptimeHours: 88,
+    sessionFraction: 0.91,
     tempC: 54,
     dashboardHost: "192.168.1.56",
     phase: 5.1,
@@ -235,7 +276,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 8_410,
     rejectedShares: 63,
     bestDifficulty: 6_204_880,
-    uptimeHours: 34,
+    sessionFraction: 0.28,
     tempC: 66,
     dashboardHost: "192.168.1.57",
     phase: 6.3,
@@ -249,7 +290,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 7_980,
     rejectedShares: 38,
     bestDifficulty: 4_992_110,
-    uptimeHours: 52,
+    sessionFraction: 0.65,
     tempC: 59,
     dashboardHost: "192.168.1.58",
     phase: 7.5,
@@ -263,7 +304,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 38_640,
     rejectedShares: 73,
     bestDifficulty: 88_771_220,
-    uptimeHours: 41,
+    sessionFraction: 0.55,
     tempC: 55,
     dashboardHost: "192.168.1.59",
     phase: 8.4,
@@ -277,7 +318,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 1_820,
     rejectedShares: 17,
     bestDifficulty: 48_440,
-    uptimeHours: 29,
+    sessionFraction: 0.12,
     tempC: 42,
     dashboardHost: "192.168.1.60",
     phase: 9.7,
@@ -291,7 +332,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 42_600,
     rejectedShares: 51,
     bestDifficulty: 892_110_000,
-    uptimeHours: 96,
+    sessionFraction: 0.94,
     tempC: 52,
     phase: 10.2,
   },
@@ -304,7 +345,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 88_240,
     rejectedShares: 71,
     bestDifficulty: DEMO_BEST_DIFFICULTY,
-    uptimeHours: 110,
+    sessionFraction: 0.97,
     tempC: 48,
     phase: 11.4,
   },
@@ -317,7 +358,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 61_880,
     rejectedShares: 68,
     bestDifficulty: 980_440_000,
-    uptimeHours: 84,
+    sessionFraction: 0.85,
     tempC: 50,
     phase: 12.1,
   },
@@ -330,7 +371,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 9_880,
     rejectedShares: 37,
     bestDifficulty: 14_220_000,
-    uptimeHours: 56,
+    sessionFraction: 0.62,
     tempC: 56,
     dashboardHost: "192.168.1.61",
     phase: 13.3,
@@ -345,7 +386,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 19_420,
     rejectedShares: 47,
     bestDifficulty: 156_880_000,
-    uptimeHours: 73,
+    sessionFraction: 0.71,
     tempC: 51,
     phase: 14.6,
     online: false,
@@ -359,7 +400,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 22_140,
     rejectedShares: 55,
     bestDifficulty: 44_220_000,
-    uptimeHours: 38,
+    sessionFraction: 0.35,
     tempC: 62,
     dashboardHost: "192.168.1.62",
     phase: 15.2,
@@ -373,7 +414,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 10_440,
     rejectedShares: 29,
     bestDifficulty: 11_080_000,
-    uptimeHours: 45,
+    sessionFraction: 0.42,
     tempC: 58,
     dashboardHost: "192.168.1.63",
     phase: 16.1,
@@ -387,7 +428,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 16_220,
     rejectedShares: 33,
     bestDifficulty: 28_640_000,
-    uptimeHours: 67,
+    sessionFraction: 0.78,
     tempC: 46,
     phase: 17.4,
   },
@@ -400,7 +441,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 102_400,
     rejectedShares: 82,
     bestDifficulty: 1_420_000_000,
-    uptimeHours: 91,
+    sessionFraction: 0.93,
     tempC: 49,
     phase: 18.3,
   },
@@ -413,7 +454,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 12_880,
     rejectedShares: 41,
     bestDifficulty: 19_550_000,
-    uptimeHours: 22,
+    sessionFraction: 0.09,
     tempC: 64,
     dashboardHost: "192.168.1.64",
     phase: 19.7,
@@ -427,7 +468,7 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
     shares: 74_120,
     rejectedShares: 59,
     bestDifficulty: 1_105_000_000,
-    uptimeHours: 78,
+    sessionFraction: 0.82,
     tempC: 53,
     phase: 20.5,
   },
@@ -458,30 +499,33 @@ function buildMinerHashrateChart(
   baseHashrate: number,
   phase: number,
   now = Date.now(),
-  options?: { offlineSinceMs?: number },
+  options?: { connectedSinceMs?: number; offlineSinceMs?: number },
 ): ChartPoint[] {
-  const points = buildZeroChart(CHART_HOURS, CHART_INTERVAL_MINUTES, now);
+  const { hours, intervalMinutes } = mockChartWindow(now);
+  const points = buildZeroChart(hours, intervalMinutes, now);
   const steps = points.length;
   const liveHashrate = fluctuateHashrate(baseHashrate, phase, now);
+  const connectedSinceMs = options?.connectedSinceMs;
   const offlineSinceMs = options?.offlineSinceMs;
 
   return points.map((point, index) => {
     const pointTs = new Date(point.label).getTime();
-    if (
-      offlineSinceMs != null &&
-      Number.isFinite(pointTs) &&
-      pointTs >= offlineSinceMs
-    ) {
+    if (!Number.isFinite(pointTs)) {
+      return { ...point, data: 0 };
+    }
+    // No hashrate before this worker joined (or after it went offline).
+    if (connectedSinceMs != null && pointTs < connectedSinceMs) {
+      return { ...point, data: 0 };
+    }
+    if (offlineSinceMs != null && pointTs >= offlineSinceMs) {
       return { ...point, data: 0 };
     }
 
     const progress = index / Math.max(1, steps - 1);
     const ramp = 0.78 + 0.22 * progress;
-    const wobble = Number.isFinite(pointTs)
-      ? chartWobbleMultiplier(phase, pointTs)
-      : 1;
-    const isLast = index === steps - 1 && offlineSinceMs == null;
-    const value = isLast ? liveHashrate : baseHashrate * ramp * wobble;
+    const wobble = chartWobbleMultiplier(phase, pointTs);
+    const isLiveTip = index === steps - 1 && offlineSinceMs == null;
+    const value = isLiveTip ? liveHashrate : baseHashrate * ramp * wobble;
 
     return {
       ...point,
@@ -490,8 +534,48 @@ function buildMinerHashrateChart(
   });
 }
 
+type MockWorkerSession = {
+  online: boolean;
+  uptimeSeconds: number | null;
+  connectedSinceMs: number;
+  offlineSinceMs?: number;
+};
+
+/** Shared session math for miner table uptime + chart history. */
+function mockWorkerSession(
+  miner: MockMinerSeed,
+  index: number,
+  now: number,
+): MockWorkerSession {
+  const online = miner.online !== false;
+  const uptimeSeconds = mockWorkerUptimeSeconds(
+    miner.sessionFraction,
+    index,
+    miner.phase,
+    now,
+  );
+
+  if (online) {
+    return {
+      online: true,
+      uptimeSeconds,
+      connectedSinceMs: now - uptimeSeconds * 1000,
+    };
+  }
+
+  const offlineSinceMs = mockOfflineSinceMs(index, now);
+  return {
+    online: false,
+    uptimeSeconds: null,
+    // Still had a prior session — chart is live only between connect and disconnect.
+    connectedSinceMs: offlineSinceMs - uptimeSeconds * 1000,
+    offlineSinceMs,
+  };
+}
+
 function sumCharts(series: MinerChartSeries[], now = Date.now()): ChartPoint[] {
-  if (series.length === 0) return buildZeroChart(CHART_HOURS, CHART_INTERVAL_MINUTES, now);
+  const { hours, intervalMinutes } = mockChartWindow(now);
+  if (series.length === 0) return buildZeroChart(hours, intervalMinutes, now);
 
   const length = series[0].chart.length;
   return Array.from({ length }, (_, index) => {
@@ -506,7 +590,7 @@ function sumCharts(series: MinerChartSeries[], now = Date.now()): ChartPoint[] {
 
 function buildMockWorkers(now = Date.now()): Worker[] {
   return MOCK_MINER_SEEDS.map((miner, index) => {
-    const online = miner.online !== false;
+    const session = mockWorkerSession(miner, index, now);
     return {
       id: miner.id,
       name: miner.name,
@@ -514,19 +598,21 @@ function buildMockWorkers(now = Date.now()): Worker[] {
       protocol: index % 5 === 0 ? "sv2" : "sv1",
       address: DEMO_ADDRESS,
       sessionId: miner.sessionId,
-      hashrate: online ? fluctuateHashrate(miner.hashrate, miner.phase, now) : 0,
+      hashrate: session.online ? fluctuateHashrate(miner.hashrate, miner.phase, now) : 0,
       shares: miner.shares,
       rejectedShares: miner.rejectedShares,
       bestDifficulty: miner.bestDifficulty,
-      uptimeSeconds: online ? miner.uptimeHours * 3600 : null,
-      lastSeen: online
+      uptimeSeconds: session.uptimeSeconds,
+      lastSeen: session.online
         ? new Date(now - (3_000 + index * 1_500)).toISOString()
-        : new Date(mockOfflineSinceMs(index, now)).toISOString(),
-      startTime: online ? hoursAgo(miner.uptimeHours, now) : null,
-      tempC: online ? miner.tempC : null,
+        : new Date(session.offlineSinceMs ?? now).toISOString(),
+      startTime: session.online
+        ? new Date(session.connectedSinceMs).toISOString()
+        : null,
+      tempC: session.online ? miner.tempC : null,
       dashboardUrl: miner.dashboardHost ? `http://${miner.dashboardHost}` : null,
       blocksFound: 0,
-      online,
+      online: session.online,
     };
   });
 }
@@ -538,12 +624,13 @@ function mockOfflineSinceMs(index: number, now: number) {
 /** Coherent demo payload — worker hashrates, miner charts, and pool total all align. */
 export function buildMockDashboard(now = Date.now()): DashboardPayload {
   const minerCharts: MinerChartSeries[] = MOCK_MINER_SEEDS.map((miner, index) => {
-    const online = miner.online !== false;
+    const session = mockWorkerSession(miner, index, now);
     return {
       id: miner.id,
       name: miner.name,
       chart: buildMinerHashrateChart(miner.hashrate, miner.phase, now, {
-        offlineSinceMs: online ? undefined : mockOfflineSinceMs(index, now),
+        connectedSinceMs: session.connectedSinceMs,
+        offlineSinceMs: session.offlineSinceMs,
       }),
     };
   });
@@ -568,7 +655,7 @@ export function buildMockDashboard(now = Date.now()): DashboardPayload {
       fee: 0,
     },
     chart,
-    chartSince: hoursAgo(CHART_HOURS, now),
+    chartSince: hoursAgo(mockChartWindow(now).hours, now),
     network: {
       height: blockHeight,
       nextHeight: blockHeight + 1,
@@ -590,8 +677,8 @@ export function buildMockDashboard(now = Date.now()): DashboardPayload {
       timeAvgMs: 585_000,
       expectedBlocks: 820,
     },
-    uptimeSeconds: 86_400 * 7,
-    overallUptimeSeconds: 86_400 * 57,
+    uptimeSeconds: mockSessionUptimeSeconds(now),
+    overallUptimeSeconds: mockLifetimeUptimeSeconds(now),
     platform: "Linux",
     sharesAccepted: 512_840,
     sharesRejected: 1_284,
@@ -607,6 +694,7 @@ export function buildMockDashboard(now = Date.now()): DashboardPayload {
     sv2AuthorityPublicKey: "9bXiEd8boQVhq7WddEcERUL5tyyJVFYdU8th3HfbNXK3Yw6GRXh",
   };
 }
+
 
 /** Static snapshot for imports/tests; prefer buildMockDashboard() at runtime. */
 export const mockDashboard: DashboardPayload = buildMockDashboard();

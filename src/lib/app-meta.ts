@@ -15,7 +15,7 @@ export function deploymentKind(): DeploymentKind {
     return "demo";
   }
   const api = (process.env.PUBLIC_POOL_API_URL ?? "").trim();
-  if (api.includes("lido-app") || api.includes(":2019")) return "umbrel";
+  if (api.includes("lido-app") || api.includes(":2299") || api.includes(":2019")) return "umbrel";
   return "self-hosted";
 }
 

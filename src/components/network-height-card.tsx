@@ -100,7 +100,7 @@ export function NetworkHeightPill({ network }: { network: NetworkInfo }) {
         onClose={() => setOpen(false)}
         label="Bitcoin network"
       >
-        <div className="w-full max-w-lg overflow-hidden rounded-xl bg-background lido-dialog-shell">
+        <div className="w-[min(100%,32rem)] min-w-0 overflow-hidden rounded-xl bg-background lido-dialog-shell">
           <Card className="border-0 shadow-none">
             <CardHeader className="px-6 pt-6">
               <CardTitle>Node network info</CardTitle>

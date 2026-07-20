@@ -80,11 +80,11 @@ export function ModalOverlay({
       />
       <div
         className={cn(
-          "relative z-10 flex w-full min-w-0 max-w-[calc(100vw-1.5rem)] justify-center",
-          "max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain sm:max-w-none",
+          // Center children; each dialog sets an explicit w-[min(100%,…)] — do not force full bleed.
+          "relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full justify-center overflow-x-hidden overflow-y-auto overscroll-contain",
         )}
       >
-        <div className="w-full min-w-0 max-w-full">{children}</div>
+        {children}
       </div>
     </div>,
     document.body,

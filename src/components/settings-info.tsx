@@ -5,6 +5,7 @@ import { Check, CircleHelp, Copy, Info } from "lucide-react";
 
 import type { DeploymentKind } from "@/lib/app-meta";
 import { formatUptime, numberSuffix } from "@/lib/format";
+import { mockLifetimeUptimeSeconds, mockSessionUptimeSeconds } from "@/lib/mock-data";
 import {
   STRATUM_V1_PORT,
   STRATUM_V2_PORT,
@@ -24,17 +25,23 @@ export type PoolLifetimeStats = {
   sharesRejected: number;
   bestDifficulty: number;
   blocksFound: number;
+  /** Current process — same figure as the dashboard uptime card. */
+  sessionUptimeSeconds: number | null;
+  /** Cumulative across restarts. */
   overallUptimeSeconds: number | null;
 };
 
-const DEMO_LIFETIME: PoolLifetimeStats = {
-  platform: "Linux",
-  sharesAccepted: 512_840,
-  sharesRejected: 1_284,
-  bestDifficulty: 4.2e12,
-  blocksFound: 1,
-  overallUptimeSeconds: 86_400 * 57,
-};
+function demoLifetimeStats(): PoolLifetimeStats {
+  return {
+    platform: "Linux",
+    sharesAccepted: 512_840,
+    sharesRejected: 1_284,
+    bestDifficulty: 4.2e12,
+    blocksFound: 1,
+    sessionUptimeSeconds: mockSessionUptimeSeconds(),
+    overallUptimeSeconds: mockLifetimeUptimeSeconds(),
+  };
+}
 
 function Tip({ text }: { text: string }) {
   return (
@@ -193,7 +200,7 @@ export function SettingsInfoPanel({
   const [pane, setPane] = useState<InfoPane>("pool");
   const [hostEndpoint, setHostEndpoint] = useState("");
   const [serverAddress, setServerAddress] = useState("");
-  const stats = lifetime ?? (deployment === "demo" ? DEMO_LIFETIME : null);
+  const stats = lifetime ?? (deployment === "demo" ? demoLifetimeStats() : null);
 
   useEffect(() => {
     setHostEndpoint(
@@ -374,14 +381,24 @@ export function SettingsInfoPanel({
             copyable={false}
           />
           <InfoRow
-            label="Overall Uptime"
+            label="Session uptime"
+            value={
+              stats?.sessionUptimeSeconds != null
+                ? formatUptime(stats.sessionUptimeSeconds)
+                : "—"
+            }
+            copyable={false}
+            tip="How long this Lido process has been running — same value as the dashboard uptime card. Resets when the app restarts."
+          />
+          <InfoRow
+            label="Overall uptime"
             value={
               stats?.overallUptimeSeconds != null
                 ? formatUptime(stats.overallUptimeSeconds)
                 : "—"
             }
             copyable={false}
-            tip="Combined running time across every Lido session. The dashboard uptime resets on restart; this one keeps counting."
+            tip="Combined running time across every Lido session. Keeps counting through restarts."
           />
         </section>
       ) : null}

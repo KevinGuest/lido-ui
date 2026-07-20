@@ -11,11 +11,15 @@ const nextConfig: NextConfig = {
     ...(isDemo ? { NEXT_PUBLIC_LIDO_DEMO: "true" } : {}),
   },
   output: isPages ? "export" : "standalone",
+  images: {
+    // Logos use quality={100}; Next 16 defaults to [75] only.
+    qualities: [75, 100],
+    ...(isPages ? { unoptimized: true } : {}),
+  },
   ...(isPages
     ? {
         // Custom domain (lido.wtf) serves at `/`. Keep basePath empty.
         // Re-add `/lido-ui` only if publishing under username.github.io/lido-ui.
-        images: { unoptimized: true },
         trailingSlash: true,
       }
     : {}),

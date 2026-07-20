@@ -314,7 +314,7 @@ function WorkerDialog({
 
   return (
     <ModalOverlay open onClose={onClose} label={`${worker.name} details`}>
-      <div className="w-full max-w-lg overflow-hidden rounded-xl bg-background lido-dialog-shell">
+      <div className="w-[min(100%,32rem)] min-w-0 overflow-hidden rounded-xl bg-background lido-dialog-shell">
         <Card className="border-0 shadow-none">
           <CardHeader>
             <CardTitle>{worker.name}</CardTitle>

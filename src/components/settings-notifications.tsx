@@ -265,7 +265,7 @@ function EventToggles({
         onClose={() => setDraftUnit(null)}
         label="Pool digest interval"
       >
-        <div className="w-full max-w-sm rounded-2xl border border-border/60 bg-background p-5 shadow-xl">
+        <div className="w-[min(100%,24rem)] rounded-2xl border border-border/60 bg-background p-5 shadow-xl">
           <h3 className="text-base font-medium">Pool digest interval</h3>
           <p className="mt-1 text-sm text-muted-foreground">
             How often should Lido send this channel a pool summary?

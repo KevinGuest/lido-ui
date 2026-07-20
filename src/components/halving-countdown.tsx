@@ -160,7 +160,7 @@ export function HalvingCountdown({
         onClose={() => setOpen(false)}
         label={pane === "about" ? "About Bitcoin halvings" : "Previous halvings"}
       >
-        <div className="w-full max-w-lg overflow-hidden rounded-xl bg-background px-6 pt-6 pb-6 lido-dialog-shell sm:px-8 sm:pt-8 sm:pb-8">
+        <div className="w-[min(100%,32rem)] min-w-0 overflow-hidden rounded-xl bg-background px-6 pt-6 pb-6 lido-dialog-shell sm:px-8 sm:pt-8 sm:pb-8">
             <div className="mb-6 flex items-start justify-between gap-4">
               <div className="min-w-0 space-y-1.5">
                 <h2 className="text-lg font-medium text-foreground">

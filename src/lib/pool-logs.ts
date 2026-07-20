@@ -16,10 +16,10 @@ const DEMO_TEMPLATES = [
   { level: "info" as const, message: "Loaded persisted SV2 authority key from DB/sv2-authority.privkey" },
   { level: "warn" as const, message: "[SV2] difficulty retarget channel 3: 8192 → 16384" },
   { level: "log" as const, message: "Client heartbeat nerdqaxe-kitchen hashRate=5.73e12" },
-  { level: "error" as const, message: "Telegram polling failed: timeout of 10000ms exceeded (demo)" },
   { level: "log" as const, message: "[SV1] New job broadcast height=883512" },
-  { level: "info" as const, message: "Notifications: discord=on telegram=on events=connect,disconnect,best,block" },
+  { level: "info" as const, message: "Notifications idle (discord=off telegram=off)" },
   { level: "log" as const, message: "Soft-deleted stale session bitaxe-spare (no heartbeat 120s)" },
+  { level: "log" as const, message: "[SV2] Accepted share from nerdqaxe-kitchen (diff 16384)" },
 ];
 
 let demoSeq = 0;

@@ -232,7 +232,7 @@ export function ConnectDialog({
 
   return (
     <ModalOverlay open={open} onClose={onClose} label="Connect miners">
-      <div className="flex w-full min-w-0 max-w-lg flex-col overflow-hidden rounded-2xl bg-background lido-dialog-shell">
+      <div className="flex w-[min(100%,32rem)] min-w-0 flex-col overflow-hidden rounded-2xl bg-background lido-dialog-shell">
         <DialogMarquees text="Connect · Stratum · Point your rig" tone="connect">
           <Card className="gap-4 border-0 py-4 shadow-none">
             <CardHeader>
