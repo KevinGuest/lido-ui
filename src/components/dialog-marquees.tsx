@@ -156,16 +156,16 @@ export function DialogMarquees({
 
   return (
     <>
-      <div className={cn("py-1.5", band)}>
+      <div className={cn("min-w-0 w-full overflow-hidden py-1.5", band)}>
         {interactive ? (
           <InteractiveMarqueeTrack text={text} />
         ) : (
           <MarqueeTrack text={text} />
         )}
       </div>
-      {children}
+      <div className="min-w-0 w-full">{children}</div>
       {showBottom ? (
-        <div className={cn("py-1.5", band)}>
+        <div className={cn("min-w-0 w-full overflow-hidden py-1.5", band)}>
           {interactive ? (
             <InteractiveMarqueeTrack text={text} />
           ) : (

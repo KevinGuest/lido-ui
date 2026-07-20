@@ -51,7 +51,7 @@ export function DonateDialog({
 }) {
   return (
     <ModalOverlay open={open} onClose={onClose} label="Donate to Public Pool">
-      <div className="flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-background lido-dialog-shell">
+      <div className="flex w-full min-w-0 max-w-2xl flex-col overflow-hidden rounded-2xl bg-background lido-dialog-shell">
         <DialogMarquees text="Support us · Keep Public Pool flowing · Thank you" tone="donate">
           <Card className="border-0 shadow-none">
             <CardHeader>
@@ -80,7 +80,7 @@ export function DonateDialog({
                     alt={LN_ADDRESS}
                     width={200}
                     height={200}
-                    className="size-[200px] rounded-lg bg-white p-2"
+                    className="size-[min(200px,70vw)] rounded-lg bg-white p-2 sm:size-[200px]"
                   />
                   <CopyableAddress value={LN_ADDRESS} />
                 </div>
@@ -91,7 +91,7 @@ export function DonateDialog({
                     alt={ONCHAIN_ADDRESS}
                     width={200}
                     height={200}
-                    className="size-[200px] rounded-lg bg-white p-2"
+                    className="size-[min(200px,70vw)] rounded-lg bg-white p-2 sm:size-[200px]"
                   />
                   <CopyableAddress value={ONCHAIN_ADDRESS} />
                 </div>

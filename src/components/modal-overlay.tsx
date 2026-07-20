@@ -64,7 +64,7 @@ export function ModalOverlay({
   return createPortal(
     <div
       className={cn(
-        "fixed inset-0 z-[100] grid place-items-center p-4",
+        "fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4",
         className,
       )}
       role="dialog"
@@ -78,7 +78,14 @@ export function ModalOverlay({
         aria-label="Close"
         onClick={onClose}
       />
-      <div className="relative z-10 flex w-full justify-center">{children}</div>
+      <div
+        className={cn(
+          "relative z-10 flex w-full min-w-0 max-w-[calc(100vw-1.5rem)] justify-center",
+          "max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain sm:max-w-none",
+        )}
+      >
+        <div className="w-full min-w-0 max-w-full">{children}</div>
+      </div>
     </div>,
     document.body,
   );

@@ -50,7 +50,7 @@ export function BlocksFoundCard({
         onClose={() => setOpen(false)}
         label="Found blocks"
       >
-        <div className="w-full max-w-3xl overflow-hidden rounded-xl bg-background lido-dialog-shell">
+        <div className="w-full min-w-0 max-w-3xl overflow-hidden rounded-xl bg-background lido-dialog-shell">
           <Card className="border-0 shadow-none">
             <CardHeader className="px-6 pt-6">
               <CardTitle>Blocks found</CardTitle>

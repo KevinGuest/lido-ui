@@ -169,9 +169,10 @@
   }
 }
 
-/* Marquee dialog shells: no hard outline ringing the banner strips in light mode. */
+/* Marquee dialog shells: no hard outline ringing the banner strips in light mode.
+   min-w-0 keeps long marquee tracks from blowing past the viewport. */
 .lido-dialog-shell {
-  @apply border-0 shadow-xl ring-1 ring-black/5 dark:ring-white/10;
+  @apply min-w-0 max-w-full border-0 shadow-xl ring-1 ring-black/5 dark:ring-white/10;
 }
 
 /* Modal open: blur the app root (more reliable than backdrop-filter alone). */

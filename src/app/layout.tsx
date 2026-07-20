@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 
 import { DemoSiteBanner } from "@/components/demo-site-banner";
 import { ThemeInit } from "@/components/theme-init";
@@ -41,12 +42,12 @@ export default function RootLayout({
       // Default dark matches THEME_BOOT_SCRIPT / product default — avoids light→dark splash flash.
       className={cn("dark font-sans", geist.variable, geistMono.variable)}
     >
-      <head>
-        <script
+      <body className="min-h-screen bg-background text-foreground antialiased">
+        <Script
+          id="lido-theme-boot"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }}
         />
-      </head>
-      <body className="min-h-screen bg-background text-foreground antialiased">
         <ThemeInit />
         <ToastProvider offsetTopClassName={isDemoSite ? "top-14" : "top-4"}>
           <div id="lido-app">

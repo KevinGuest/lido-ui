@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 import { AppHeader } from "@/components/app-header";
 import { AutoRefresh } from "@/components/auto-refresh";
@@ -28,9 +28,56 @@ const CHAIN_POLL_MS = 60_000;
 /** Hold the splash long enough for the spin, then crossfade. */
 const BOOT_MS = 1100;
 const FADE_MS = 450;
+const BOOT_SPLASH_SESSION_KEY = "lido-boot-splash-done";
+const BOOT_SPLASH_STARTED_KEY = "lido-boot-splash-started";
 
 /** Once per tab session — returning from Settings must not replay the boot splash. */
 let bootSplashDone = false;
+/** First splash start (ms) — survives remounts so the timer cannot be reset forever. */
+let bootSplashStartedAt: number | null = null;
+
+function readBootSplashDone() {
+  if (bootSplashDone) return true;
+  if (typeof window === "undefined") return false;
+  try {
+    return sessionStorage.getItem(BOOT_SPLASH_SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markBootSplashDone() {
+  bootSplashDone = true;
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(BOOT_SPLASH_SESSION_KEY, "1");
+    sessionStorage.removeItem(BOOT_SPLASH_STARTED_KEY);
+  } catch {
+    // Ignore quota / private mode.
+  }
+}
+
+function ensureBootSplashStartedAt() {
+  if (bootSplashStartedAt != null) return bootSplashStartedAt;
+  if (typeof window !== "undefined") {
+    try {
+      const raw = sessionStorage.getItem(BOOT_SPLASH_STARTED_KEY);
+      const parsed = raw ? Number(raw) : NaN;
+      if (Number.isFinite(parsed) && parsed > 0) {
+        bootSplashStartedAt = parsed;
+        return parsed;
+      }
+      const now = Date.now();
+      sessionStorage.setItem(BOOT_SPLASH_STARTED_KEY, String(now));
+      bootSplashStartedAt = now;
+      return now;
+    } catch {
+      // fall through
+    }
+  }
+  bootSplashStartedAt = Date.now();
+  return bootSplashStartedAt;
+}
 
 export function HomeDashboard({
   initial,
@@ -42,8 +89,10 @@ export function HomeDashboard({
   stratumConfigured?: string;
 }) {
   const [dashboard, setDashboard] = useState(initial);
-  const [splashMounted, setSplashMounted] = useState(() => !bootSplashDone);
-  const [splashOpaque, setSplashOpaque] = useState(() => !bootSplashDone);
+  // Always start as splash on SSR + first client paint so hydration matches.
+  // Session skip / timer run after mount; deadline is absolute across remounts.
+  const [splashMounted, setSplashMounted] = useState(true);
+  const [splashOpaque, setSplashOpaque] = useState(true);
   const liveChain = initial.source === "mock";
   const update = useUpdateAvailability(deployment, { announce: !splashOpaque });
 
@@ -51,24 +100,40 @@ export function HomeDashboard({
     setDashboard(initial);
   }, [initial]);
 
+  useLayoutEffect(() => {
+    if (!readBootSplashDone()) return;
+    markBootSplashDone();
+    setSplashOpaque(false);
+    setSplashMounted(false);
+  }, []);
+
   useEffect(() => {
-    if (bootSplashDone) {
+    if (readBootSplashDone()) {
+      markBootSplashDone();
       setSplashOpaque(false);
       setSplashMounted(false);
       return;
     }
 
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let reduceMotion = false;
+    try {
+      reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {
+      reduceMotion = false;
+    }
     if (reduceMotion) {
-      bootSplashDone = true;
+      markBootSplashDone();
       setSplashOpaque(false);
       setSplashMounted(false);
       return;
     }
 
+    const startedAt = ensureBootSplashStartedAt();
+    const remaining = Math.max(0, BOOT_MS - (Date.now() - startedAt));
     const bootId = window.setTimeout(() => {
+      markBootSplashDone();
       setSplashOpaque(false);
-    }, BOOT_MS);
+    }, remaining);
 
     return () => window.clearTimeout(bootId);
   }, []);
@@ -76,7 +141,7 @@ export function HomeDashboard({
   useEffect(() => {
     if (splashOpaque || !splashMounted) return;
     const fadeId = window.setTimeout(() => {
-      bootSplashDone = true;
+      markBootSplashDone();
       setSplashMounted(false);
     }, FADE_MS);
     return () => window.clearTimeout(fadeId);
@@ -86,10 +151,11 @@ export function HomeDashboard({
   useEffect(() => {
     return () => {
       if (!splashOpaque) {
-        bootSplashDone = true;
+        markBootSplashDone();
       }
     };
   }, [splashOpaque]);
+
 
   useEffect(() => {
     if (!liveChain) return;
@@ -167,7 +233,7 @@ export function HomeDashboard({
         )}
         aria-hidden={!showApp}
       >
-        <AutoRefresh seconds={60} />
+        {showApp ? <AutoRefresh seconds={60} /> : null}
         <UpdateNotifier
           dialogOpen={update.dialogOpen}
           onCloseDialog={update.closeDialog}

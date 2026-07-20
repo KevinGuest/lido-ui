@@ -46,6 +46,7 @@ import {
 } from "@/lib/miner-colors";
 import type { ChartPoint, MinerChartSeries } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 
 const CHART_GRID_STROKE = "var(--chart-grid)";
 const CHART_CURSOR_STROKE = "var(--chart-cursor)";
@@ -352,6 +353,28 @@ function prepareMinerRows(
   };
 }
 
+function useChartLayout() {
+  const isMobile = useIsMobile();
+  return {
+    isMobile,
+    heightClass: isMobile
+      ? "aspect-auto h-80 w-full overflow-visible"
+      : "aspect-auto h-64 w-full overflow-visible",
+    minersHeightClass: isMobile
+      ? "aspect-auto h-80 w-full overflow-visible"
+      : "aspect-auto h-72 w-full overflow-visible",
+    emptyHeightClass: isMobile ? "flex h-80 items-center justify-center" : "flex h-64 items-center justify-center",
+    minersEmptyHeightClass: isMobile
+      ? "flex h-80 items-center justify-center"
+      : "flex h-72 items-center justify-center",
+    margin: isMobile
+      ? { left: 0, right: 4, top: 12, bottom: 0 }
+      : { left: 12, right: 8, top: 20, bottom: 4 },
+            yAxisWidth: isMobile ? 48 : 72,
+    minTickGap: isMobile ? 48 : 32,
+  };
+}
+
 function TotalHashrateChart({
   rows,
   flatZero,
@@ -359,25 +382,38 @@ function TotalHashrateChart({
   rows: ChartRow[];
   flatZero: boolean;
 }) {
+  const layout = useChartLayout();
+
   if (rows.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+      <div
+        className={cn(
+          layout.emptyHeightClass,
+          "rounded-lg border border-dashed border-border text-sm text-muted-foreground",
+        )}
+      >
         Waiting for hashrate — chart starts when miners submit shares.
       </div>
     );
   }
 
   return (
-    <ChartContainer config={totalChartConfig} className="aspect-auto h-64 w-full overflow-visible">
-      <AreaChart accessibilityLayer data={rows} margin={{ left: 12, right: 8, top: 20, bottom: 4 }}>
+    <ChartContainer config={totalChartConfig} className={layout.heightClass}>
+      <AreaChart accessibilityLayer data={rows} margin={layout.margin}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
-        <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
+        <XAxis
+          dataKey="time"
+          tickLine={false}
+          axisLine={false}
+          minTickGap={layout.minTickGap}
+          tickMargin={layout.isMobile ? 4 : 0}
+        />
         <YAxis
           tickLine={false}
           axisLine={false}
-          width={72}
+          width={layout.yAxisWidth}
           domain={flatZero ? [0, 1] : [0, "auto"]}
-          tickMargin={8}
+          tickMargin={layout.isMobile ? 4 : 8}
           tickFormatter={(value: number) => hashAxisTick(value)}
         />
         <ChartTooltip
@@ -407,25 +443,38 @@ function TotalHashrateChart({
 }
 
 function WeekCompareChart({ rows, flatZero }: { rows: ChartRow[]; flatZero: boolean }) {
+  const layout = useChartLayout();
+
   if (rows.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+      <div
+        className={cn(
+          layout.emptyHeightClass,
+          "rounded-lg border border-dashed border-border text-sm text-muted-foreground",
+        )}
+      >
         Need about two weeks of share history to compare weeks.
       </div>
     );
   }
 
   return (
-    <ChartContainer config={weekCompareConfig} className="aspect-auto h-64 w-full overflow-visible">
-      <AreaChart accessibilityLayer data={rows} margin={{ left: 12, right: 8, top: 20, bottom: 4 }}>
+    <ChartContainer config={weekCompareConfig} className={layout.heightClass}>
+      <AreaChart accessibilityLayer data={rows} margin={layout.margin}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
-        <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
+        <XAxis
+          dataKey="time"
+          tickLine={false}
+          axisLine={false}
+          minTickGap={layout.minTickGap}
+          tickMargin={layout.isMobile ? 4 : 0}
+        />
         <YAxis
           tickLine={false}
           axisLine={false}
-          width={72}
+          width={layout.yAxisWidth}
           domain={flatZero ? [0, 1] : [0, "auto"]}
-          tickMargin={8}
+          tickMargin={layout.isMobile ? 4 : 8}
           tickFormatter={(value: number) => hashAxisTick(value)}
         />
         <ChartTooltip
@@ -500,6 +549,7 @@ function MinersHashrateChart({
   flatZero: boolean;
   emptySelection?: boolean;
 }) {
+  const layout = useChartLayout();
   const [pinnedKey, setPinnedKey] = React.useState<string | null>(null);
   const [hoveredKey, setHoveredKey] = React.useState<string | null>(null);
   const ignoreChartClickRef = React.useRef(false);
@@ -520,7 +570,12 @@ function MinersHashrateChart({
 
   if (emptySelection) {
     return (
-      <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+      <div
+        className={cn(
+          layout.minersEmptyHeightClass,
+          "rounded-lg border border-dashed border-border text-sm text-muted-foreground",
+        )}
+      >
         Select miners below to plot their hashrate over time.
       </div>
     );
@@ -528,7 +583,12 @@ function MinersHashrateChart({
 
   if (keys.length === 0) {
     return (
-      <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+      <div
+        className={cn(
+          layout.minersEmptyHeightClass,
+          "rounded-lg border border-dashed border-border text-sm text-muted-foreground",
+        )}
+      >
         Connect miners to see per-worker hashrate.
       </div>
     );
@@ -536,18 +596,23 @@ function MinersHashrateChart({
 
   if (rows.length === 0) {
     return (
-      <div className="flex h-72 items-center justify-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+      <div
+        className={cn(
+          layout.minersEmptyHeightClass,
+          "rounded-lg border border-dashed border-border text-sm text-muted-foreground",
+        )}
+      >
         No miner history in this time range yet.
       </div>
     );
   }
 
   return (
-    <ChartContainer config={config} className="aspect-auto h-72 w-full overflow-visible">
+    <ChartContainer config={config} className={layout.minersHeightClass}>
       <LineChart
         accessibilityLayer
         data={rows}
-        margin={{ left: 12, right: 8, top: 20, bottom: 4 }}
+        margin={layout.margin}
         onMouseLeave={() => setHoveredKey(null)}
         onClick={() => {
           if (ignoreChartClickRef.current) return;
@@ -555,13 +620,19 @@ function MinersHashrateChart({
         }}
       >
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={CHART_GRID_STROKE} />
-        <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={32} />
+        <XAxis
+          dataKey="time"
+          tickLine={false}
+          axisLine={false}
+          minTickGap={layout.minTickGap}
+          tickMargin={layout.isMobile ? 4 : 0}
+        />
         <YAxis
           tickLine={false}
           axisLine={false}
-          width={72}
+          width={layout.yAxisWidth}
           domain={flatZero ? [0, 1] : [0, "auto"]}
-          tickMargin={8}
+          tickMargin={layout.isMobile ? 4 : 8}
           tickFormatter={(value: number) => hashAxisTick(value)}
         />
         <ChartTooltip
@@ -688,6 +759,18 @@ function MinerSelectionBar({
   );
 }
 
+function toDateInputValue(date: Date) {
+  return format(date, "yyyy-MM-dd");
+}
+
+function parseDateInputValue(value: string, end: boolean) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return null;
+  return end ? endOfLocalDay(date) : startOfLocalDay(date);
+}
+
 function ChartDateRangePicker({
   chartSince,
   liveMode,
@@ -702,65 +785,179 @@ function ChartDateRangePicker({
   onRangeChange: (range: DateRange | undefined) => void;
 }) {
   const [open, setOpen] = React.useState(false);
+  const [mobileRangeOpen, setMobileRangeOpen] = React.useState(false);
   const sinceDate = startOfLocalDay(new Date(chartSince));
   const today = endOfLocalDay(new Date());
+  const minInput = toDateInputValue(sinceDate);
+  const maxInput = toDateInputValue(today);
+  const fromInput = range?.from ? toDateInputValue(range.from) : "";
+  const toInput = range?.to
+    ? toDateInputValue(range.to)
+    : range?.from
+      ? toDateInputValue(range.from)
+      : "";
+
+  function applyNativeRange(nextFrom: string, nextTo: string) {
+    const from = parseDateInputValue(nextFrom, false);
+    const to = parseDateInputValue(nextTo, true);
+    if (!from || !to) return;
+    const clampedFrom = from < sinceDate ? sinceDate : from > today ? today : from;
+    let clampedTo = to < sinceDate ? sinceDate : to > today ? today : to;
+    if (clampedTo < clampedFrom) clampedTo = endOfLocalDay(clampedFrom);
+    onRangeChange({ from: clampedFrom, to: clampedTo });
+  }
+
+  const rangeLabel =
+    !liveMode && range?.from
+      ? range.to
+        ? `${format(range.from, "MMM d")} – ${format(range.to, "MMM d")}`
+        : format(range.from, "MMM d")
+      : "Range";
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-1.5">
-      <Button
-        type="button"
-        variant={liveMode ? "default" : "outline"}
-        size="sm"
-        className="h-8 text-xs"
-        onClick={onLive}
-      >
-        Live
-      </Button>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger
-          render={
-            <Button
-              variant={liveMode ? "outline" : "secondary"}
-              size="sm"
-              id="chart-date-range"
-              data-empty={liveMode || !range?.from}
-              className={cn(
-                "h-8 justify-start px-2.5 text-xs font-normal data-[empty=true]:text-muted-foreground",
-              )}
-            />
-          }
+    <>
+      {/* Desktop: Live + calendar popover (unchanged) */}
+      <div className="hidden items-center justify-end gap-1.5 md:flex">
+        <Button
+          type="button"
+          variant={liveMode ? "default" : "outline"}
+          size="sm"
+          className="h-8 text-xs"
+          onClick={onLive}
         >
-          <CalendarIcon data-icon="inline-start" className="size-3.5" />
-          {!liveMode && range?.from ? (
-            range.to ? (
-              <>
-                {format(range.from, "LLL dd, y")} – {format(range.to, "LLL dd, y")}
-              </>
+          Live
+        </Button>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger
+            render={
+              <Button
+                variant={liveMode ? "outline" : "secondary"}
+                size="sm"
+                id="chart-date-range"
+                data-empty={liveMode || !range?.from}
+                className={cn(
+                  "h-8 justify-start px-2.5 text-xs font-normal data-[empty=true]:text-muted-foreground",
+                )}
+              />
+            }
+          >
+            <CalendarIcon data-icon="inline-start" className="size-3.5" />
+            {!liveMode && range?.from ? (
+              range.to ? (
+                <>
+                  {format(range.from, "LLL dd, y")} – {format(range.to, "LLL dd, y")}
+                </>
+              ) : (
+                format(range.from, "LLL dd, y")
+              )
             ) : (
-              format(range.from, "LLL dd, y")
-            )
-          ) : (
-            <span>Pick a range</span>
-          )}
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="end">
-          <Calendar
-            mode="range"
-            defaultMonth={range?.from ?? sinceDate}
-            selected={range}
-            onSelect={(next) => {
-              onRangeChange(next);
-              if (next?.from && next?.to) setOpen(false);
-            }}
-            numberOfMonths={2}
-            disabled={{ before: sinceDate, after: today }}
-          />
-          <div className="border-t border-border px-3 py-2 text-xs text-muted-foreground">
-            Only dates since Lido started ({format(sinceDate, "PP")}).
-          </div>
-        </PopoverContent>
-      </Popover>
-    </div>
+              <span>Pick a range</span>
+            )}
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="range"
+              defaultMonth={range?.from ?? sinceDate}
+              selected={range}
+              onSelect={(next) => {
+                onRangeChange(next);
+                if (next?.from && next?.to) setOpen(false);
+              }}
+              numberOfMonths={2}
+              disabled={{ before: sinceDate, after: today }}
+            />
+            <div className="border-t border-border px-3 py-2 text-xs text-muted-foreground">
+              Only dates since Lido started ({format(sinceDate, "PP")}).
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Mobile: compact Live + Range (native dates inside popover) */}
+      <div className="flex w-full items-center gap-2 md:hidden">
+        <Button
+          type="button"
+          variant={liveMode ? "default" : "outline"}
+          size="sm"
+          className="h-9 shrink-0 px-3 text-xs"
+          onClick={onLive}
+        >
+          Live
+        </Button>
+        <Popover open={mobileRangeOpen} onOpenChange={setMobileRangeOpen}>
+          <PopoverTrigger
+            render={
+              <Button
+                variant={liveMode ? "outline" : "secondary"}
+                size="sm"
+                aria-label="Pick date range"
+                className={cn(
+                  "h-9 min-w-0 flex-1 justify-start px-2.5 text-xs font-normal",
+                  liveMode && "text-muted-foreground",
+                )}
+              />
+            }
+          >
+            <CalendarIcon className="size-3.5 shrink-0" />
+            <span className="truncate">{rangeLabel}</span>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-[min(18rem,calc(100vw-2rem))] p-3">
+            <div className="flex flex-col gap-2.5">
+              <label className="flex flex-col gap-1 text-xs">
+                <span className="text-muted-foreground">From</span>
+                <input
+                  type="date"
+                  aria-label="Range start"
+                  min={minInput}
+                  max={maxInput}
+                  value={fromInput || minInput}
+                  className={cn(
+                    "h-10 w-full rounded-md border border-border bg-background px-2.5",
+                    "text-sm text-foreground outline-none",
+                    "[color-scheme:light] dark:[color-scheme:dark]",
+                    "focus-visible:ring-2 focus-visible:ring-ring",
+                  )}
+                  onChange={(event) => {
+                    const nextFrom = event.target.value;
+                    if (!nextFrom) return;
+                    applyNativeRange(nextFrom, toInput || nextFrom);
+                  }}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs">
+                <span className="text-muted-foreground">To</span>
+                <input
+                  type="date"
+                  aria-label="Range end"
+                  min={minInput}
+                  max={maxInput}
+                  value={toInput || maxInput}
+                  className={cn(
+                    "h-10 w-full rounded-md border border-border bg-background px-2.5",
+                    "text-sm text-foreground outline-none",
+                    "[color-scheme:light] dark:[color-scheme:dark]",
+                    "focus-visible:ring-2 focus-visible:ring-ring",
+                  )}
+                  onChange={(event) => {
+                    const nextTo = event.target.value;
+                    if (!nextTo) return;
+                    applyNativeRange(fromInput || nextTo, nextTo);
+                  }}
+                />
+              </label>
+              <Button
+                type="button"
+                size="sm"
+                className="mt-1 w-full"
+                onClick={() => setMobileRangeOpen(false)}
+              >
+                Done
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </>
   );
 }
 
@@ -864,7 +1061,8 @@ export function HashrateChart({
 
   return (
     <Card>
-      <CardHeader>
+      {/* Desktop header — unchanged */}
+      <CardHeader className="max-md:hidden">
         <CardTitle>{page.title}</CardTitle>
         <CardDescription>
           {page.key === "week" ? (
@@ -927,6 +1125,64 @@ export function HashrateChart({
           </div>
         </CardAction>
       </CardHeader>
+
+      {/* Mobile header — compact controls, more room for chart */}
+      <div className="flex flex-col gap-3 px-(--card-spacing) md:hidden">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle>{page.title}</CardTitle>
+            {!liveMode ? (
+              <p className="mt-1 truncate text-xs text-muted-foreground">
+                {windowLabel(window)}
+              </p>
+            ) : null}
+          </div>
+          <div className="flex shrink-0 items-center gap-0.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Previous chart"
+              disabled={pageIndex === 0}
+              onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+            >
+              <ChevronLeft />
+            </Button>
+            <span className="min-w-[3.25rem] text-center text-xs tabular-nums text-muted-foreground">
+              {pageIndex + 1}/{pages.length}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Next chart"
+              disabled={pageIndex === pages.length - 1}
+              onClick={() => setPageIndex((i) => Math.min(pages.length - 1, i + 1))}
+            >
+              <ChevronRight />
+            </Button>
+          </div>
+        </div>
+        <ChartDateRangePicker
+          chartSince={chartSince}
+          liveMode={liveMode}
+          range={dateRange}
+          onLive={() => {
+            setLiveMode(true);
+            const to = endOfLocalDay(new Date());
+            const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
+            setDateRange({
+              from: startOfLocalDay(from),
+              to,
+            });
+          }}
+          onRangeChange={(next) => {
+            setDateRange(next);
+            if (next?.from) setLiveMode(false);
+          }}
+        />
+      </div>
+
       <CardContent>
         {page.key === "total" ? (
           <TotalHashrateChart rows={total.rows} flatZero={total.flatZero && !hasLiveHashrate} />

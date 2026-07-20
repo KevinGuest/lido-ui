@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import type { DifficultyAdjustment } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
 const EPOCH_BLOCKS = 2016;
 
@@ -39,7 +40,8 @@ export function DifficultyAdjustmentBar({
   return (
     <Card size="sm" className="h-full">
       <CardContent className="flex h-full flex-col justify-between gap-2.5">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
+        {/* Desktop header */}
+        <div className="hidden flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm md:flex">
           <p className="text-muted-foreground">
             Average block time{" "}
             <span className="font-medium text-foreground tabular-nums">
@@ -53,6 +55,27 @@ export function DifficultyAdjustmentBar({
             <p className="text-muted-foreground">
               Previous{" "}
               <span className={`font-medium tabular-nums ${changeColor(data.previousRetarget)}`}>
+                {formatChange(data.previousRetarget)}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* Mobile header — stacked, less wrap chaos */}
+        <div className="flex flex-col gap-2 md:hidden">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-sm text-muted-foreground">Average block time</p>
+            <p className="text-sm font-medium tabular-nums text-foreground">
+              {formatAvgBlockTime(data.timeAvgMs)}
+            </p>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <p className={cn("font-medium tabular-nums", changeColor(data.difficultyChange))}>
+              {formatChange(data.difficultyChange)}
+            </p>
+            <p className="text-muted-foreground">
+              Prev{" "}
+              <span className={cn("font-medium tabular-nums", changeColor(data.previousRetarget))}>
                 {formatChange(data.previousRetarget)}
               </span>
             </p>
@@ -86,7 +109,8 @@ export function DifficultyAdjustmentBar({
           ) : null}
         </div>
 
-        <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs">
+        {/* Desktop footer */}
+        <div className="hidden flex-wrap justify-between gap-x-4 gap-y-1 text-xs md:flex">
           <span className="tabular-nums">
             <span className="text-[#89cff0]">
               {data.expectedBlocks.toFixed(0)} blocks expected
@@ -100,6 +124,22 @@ export function DifficultyAdjustmentBar({
             {data.remainingBlocks.toLocaleString()} remaining →{" "}
             {data.nextRetargetHeight.toLocaleString()}
           </span>
+        </div>
+
+        {/* Mobile footer — two clear rows */}
+        <div className="flex flex-col gap-1 text-xs md:hidden">
+          <div className="flex justify-between gap-3 tabular-nums">
+            <span className="text-[#89cff0]">
+              {data.expectedBlocks.toFixed(0)} expected
+            </span>
+            <span className={isAhead ? "text-emerald-400" : "text-rose-400"}>
+              {Math.abs(ahead).toFixed(0)} {isAhead ? "ahead" : "behind"}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3 tabular-nums text-muted-foreground">
+            <span>{data.remainingBlocks.toLocaleString()} left</span>
+            <span>→ {data.nextRetargetHeight.toLocaleString()}</span>
+          </div>
         </div>
       </CardContent>
     </Card>

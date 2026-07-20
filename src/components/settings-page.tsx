@@ -123,10 +123,10 @@ export function SettingsPage({
         onUpdateClick={update.openDialog}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold tracking-tight">Settings</h2>
         <div
-          className="flex items-center gap-1.5"
+          className="grid w-full grid-cols-3 gap-1 sm:flex sm:w-auto sm:items-center sm:gap-1.5"
           role="tablist"
           aria-label="Settings sections"
         >
@@ -138,7 +138,7 @@ export function SettingsPage({
               aria-selected={tab === item.id}
               onClick={() => setTab(item.id)}
               className={cn(
-                "rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
+                "rounded-md border px-2 py-2 text-center text-xs font-medium transition-colors sm:px-3 sm:py-1.5",
                 tab === item.id
                   ? "border-transparent bg-foreground text-background"
                   : "border-border bg-transparent text-foreground hover:bg-muted/40",

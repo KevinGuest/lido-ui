@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Flame, List, MoreHorizontal, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Flame, List, MoreHorizontal, SlidersHorizontal, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -43,13 +47,23 @@ type SortKey = "name" | "hashrate" | "shares" | "bestDifficulty" | "uptime" | "b
 
 const PAGE_SIZE = 8;
 const PAGINATE_STORAGE_KEY = "lido-miners-paginate";
+const MOBILE_QUERY = "(max-width: 767px)";
 
+function isMobileViewport() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia(MOBILE_QUERY).matches;
+}
+
+/** Explicit preference wins; otherwise paginate by default on mobile. */
 function readPaginatePreference(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return localStorage.getItem(PAGINATE_STORAGE_KEY) === "true";
+    const raw = localStorage.getItem(PAGINATE_STORAGE_KEY);
+    if (raw === "true") return true;
+    if (raw === "false") return false;
+    return isMobileViewport();
   } catch {
-    return false;
+    return isMobileViewport();
   }
 }
 
@@ -158,15 +172,19 @@ function MinerDeviceCell({ worker }: { worker: ListedWorker }) {
   }
 
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-      onClick={(event) => event.stopPropagation()}
-    >
-      {label}
-    </a>
+    <>
+      {/* Mobile: plain label — no manufacturer link */}
+      <span className="text-muted-foreground md:hidden">{label}</span>
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className="hidden text-muted-foreground underline-offset-2 hover:text-foreground hover:underline md:inline"
+        onClick={(event) => event.stopPropagation()}
+      >
+        {label}
+      </a>
+    </>
   );
 }
 
@@ -187,11 +205,15 @@ function WorkerDialog({
   worker,
   rank,
   onClose,
+  onRemove,
 }: {
   worker: Worker;
   rank: number;
   onClose: () => void;
+  onRemove?: () => void;
 }) {
+  const [confirmRemove, setConfirmRemove] = useState(false);
+
   const rows: { label: string; value: ReactNode }[] = [
     {
       label: "Rank",
@@ -321,6 +343,48 @@ function WorkerDialog({
                 </div>
               ))}
             </div>
+            {onRemove ? (
+              <div className="mt-4 space-y-2 md:hidden">
+                {confirmRemove ? (
+                  <>
+                    <p className="text-center text-sm text-muted-foreground">
+                      Remove <span className="font-medium text-foreground">{worker.name}</span> from
+                      the list?
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setConfirmRemove(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        className="flex-1"
+                        onClick={() => {
+                          onRemove();
+                          onClose();
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => setConfirmRemove(true)}
+                  >
+                    Remove miner
+                  </Button>
+                )}
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </div>
@@ -422,23 +486,60 @@ export function WorkersTable({
                   {paginate ? "Show all" : "Paginate"}
                 </span>
               </button>
-              <span className="mx-0.5 hidden h-4 w-px bg-border sm:inline-block" />
-              <span className="mr-0.5 text-xs text-muted-foreground">Sort</span>
-              {SORT_OPTIONS.map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => setSort(option.key)}
+
+              {/* Mobile: tap menu for sort filters */}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  nativeButton
+                  aria-label={`Sort by ${SORT_OPTIONS.find((o) => o.key === sort)?.label ?? sort}`}
                   className={cn(
-                    "rounded-full border px-2.5 py-1 text-xs transition-colors",
-                    sort === option.key
-                      ? "border-transparent bg-foreground text-background"
-                      : "border-border text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+                    "inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs md:hidden",
+                    "text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground",
                   )}
                 >
-                  {option.label}
-                </button>
-              ))}
+                  <SlidersHorizontal className="size-3.5" strokeWidth={1.75} />
+                  {SORT_OPTIONS.find((o) => o.key === sort)?.label ?? "Sort"}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-40">
+                  <DropdownMenuRadioGroup
+                    value={sort}
+                    onValueChange={(value) => {
+                      if (value) setSort(value as SortKey);
+                    }}
+                  >
+                    <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {SORT_OPTIONS.map((option) => (
+                      <DropdownMenuRadioItem key={option.key} value={option.key}>
+                        {option.label}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Desktop: existing sort pills */}
+              <span className="mx-0.5 hidden h-4 w-px bg-border md:inline-block" />
+              <span className="mr-0.5 hidden text-xs text-muted-foreground md:inline">
+                Sort
+              </span>
+              <div className="hidden flex-wrap items-center justify-end gap-1.5 md:flex">
+                {SORT_OPTIONS.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setSort(option.key)}
+                    className={cn(
+                      "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                      sort === option.key
+                        ? "border-transparent bg-foreground text-background"
+                        : "border-border text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </CardAction>
         </CardHeader>
@@ -446,13 +547,13 @@ export function WorkersTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead className="hidden md:table-cell">Name</TableHead>
                 <TableHead>Device</TableHead>
                 <TableHead className="text-right">Hashrate</TableHead>
-                <TableHead className="text-right">Shares</TableHead>
+                <TableHead className="hidden text-right md:table-cell">Shares</TableHead>
                 <TableHead className="text-right">Uptime</TableHead>
-                <TableHead className="text-right">Last seen</TableHead>
-                <TableHead className="w-10">
+                <TableHead className="hidden text-right md:table-cell">Last seen</TableHead>
+                <TableHead className="hidden w-10 md:table-cell">
                   <span className="sr-only">Actions</span>
                 </TableHead>
               </TableRow>
@@ -478,16 +579,26 @@ export function WorkersTable({
                     )}
                     onClick={() => setSelectedId(worker.id)}
                   >
-                    <TableCell className="font-medium">
+                    <TableCell className="hidden font-medium md:table-cell">
                       <MinerNameCell worker={worker} />
                     </TableCell>
                     <TableCell>
-                      <MinerDeviceCell worker={worker} />
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "size-2.5 shrink-0 rounded-[2px] md:hidden",
+                            !worker.online && "opacity-40",
+                          )}
+                          style={{ backgroundColor: minerColor(worker.name) }}
+                          aria-hidden
+                        />
+                        <MinerDeviceCell worker={worker} />
+                      </span>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {worker.online ? hashSuffix(worker.hashrate) : "—"}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="hidden text-right md:table-cell">
                       <SharesCell accepted={worker.shares} rejected={worker.rejectedShares} />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
@@ -495,10 +606,10 @@ export function WorkersTable({
                         ? "n/a"
                         : formatUptime(worker.uptimeSeconds)}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                    <TableCell className="hidden text-right tabular-nums text-muted-foreground md:table-cell">
                       <RelativeTime iso={worker.lastSeen} />
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="hidden text-right md:table-cell">
                       <DropdownMenu>
                         <DropdownMenuTrigger
                           nativeButton
@@ -536,35 +647,69 @@ export function WorkersTable({
             </TableBody>
           </Table>
           {paginate && sorted.length > PAGE_SIZE ? (
-            <div className="mt-4 flex items-center justify-center gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Previous page"
-                disabled={safePageIndex === 0}
-                onClick={() => setPageIndex((page) => Math.max(0, page - 1))}
-              >
-                <ChevronLeft />
-              </Button>
-              <span className="min-w-[10rem] text-center text-xs tabular-nums text-muted-foreground">
-                Showing {safePageIndex * PAGE_SIZE + 1}–
-                {Math.min((safePageIndex + 1) * PAGE_SIZE, sorted.length)} of{" "}
-                {sorted.length} miners
-              </span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Next page"
-                disabled={safePageIndex >= pageCount - 1}
-                onClick={() =>
-                  setPageIndex((page) => Math.min(pageCount - 1, page + 1))
-                }
-              >
-                <ChevronRight />
-              </Button>
-            </div>
+            <>
+              {/* Desktop pager */}
+              <div className="mt-4 hidden items-center justify-center gap-1 md:flex">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Previous page"
+                  disabled={safePageIndex === 0}
+                  onClick={() => setPageIndex((page) => Math.max(0, page - 1))}
+                >
+                  <ChevronLeft />
+                </Button>
+                <span className="min-w-[10rem] text-center text-xs tabular-nums text-muted-foreground">
+                  Showing {safePageIndex * PAGE_SIZE + 1}–
+                  {Math.min((safePageIndex + 1) * PAGE_SIZE, sorted.length)} of{" "}
+                  {sorted.length} miners
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Next page"
+                  disabled={safePageIndex >= pageCount - 1}
+                  onClick={() =>
+                    setPageIndex((page) => Math.min(pageCount - 1, page + 1))
+                  }
+                >
+                  <ChevronRight />
+                </Button>
+              </div>
+
+              {/* Mobile pager — larger tap targets */}
+              <div className="mt-4 flex items-center gap-2 md:hidden">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 flex-1 gap-1.5"
+                  aria-label="Previous page"
+                  disabled={safePageIndex === 0}
+                  onClick={() => setPageIndex((page) => Math.max(0, page - 1))}
+                >
+                  <ChevronLeft className="size-4" />
+                  Prev
+                </Button>
+                <span className="min-w-[4.5rem] text-center text-xs tabular-nums text-muted-foreground">
+                  {safePageIndex + 1} / {pageCount}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 flex-1 gap-1.5"
+                  aria-label="Next page"
+                  disabled={safePageIndex >= pageCount - 1}
+                  onClick={() =>
+                    setPageIndex((page) => Math.min(pageCount - 1, page + 1))
+                  }
+                >
+                  Next
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            </>
           ) : null}
         </CardContent>
       </Card>
@@ -574,6 +719,10 @@ export function WorkersTable({
           worker={selected}
           rank={ranks.get(selected.id) ?? workers.length}
           onClose={() => setSelectedId(null)}
+          onRemove={() => {
+            removeWorker(selected);
+            setSelectedId(null);
+          }}
         />
       ) : null}
     </>
