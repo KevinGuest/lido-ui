@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Check, CircleHelp, Copy, Info } from "lucide-react";
+import { Check, Copy, Info } from "lucide-react";
 
 import type { DeploymentKind } from "@/lib/app-meta";
 import { formatUptime, numberSuffix } from "@/lib/format";
@@ -20,7 +20,6 @@ const DEMO_SV2_KEY =
 type InfoPane = "pool" | "sv1" | "sv2";
 
 export type PoolLifetimeStats = {
-  platform: string | null;
   sharesAccepted: number;
   sharesRejected: number;
   bestDifficulty: number;
@@ -33,7 +32,6 @@ export type PoolLifetimeStats = {
 
 function demoLifetimeStats(): PoolLifetimeStats {
   return {
-    platform: "Linux",
     sharesAccepted: 512_840,
     sharesRejected: 1_284,
     bestDifficulty: 4.2e12,
@@ -46,7 +44,7 @@ function demoLifetimeStats(): PoolLifetimeStats {
 function Tip({ text }: { text: string }) {
   return (
     <span className="group relative ml-1 inline-flex align-middle">
-      <CircleHelp
+      <Info
         className="size-3.5 text-muted-foreground/80"
         strokeWidth={1.75}
         aria-hidden
@@ -75,6 +73,7 @@ function InfoRow({
   mono,
   copyable = true,
   tip,
+  badge,
 }: {
   label: string;
   value: string;
@@ -82,6 +81,7 @@ function InfoRow({
   mono?: boolean;
   copyable?: boolean;
   tip?: string;
+  badge?: ReactNode;
 }) {
   const [copied, setCopied] = useState(false);
   const payload = (copyValue ?? value).trim();
@@ -102,9 +102,12 @@ function InfoRow({
           {label}
           {tip ? <Tip text={tip} /> : null}
         </p>
-        <p className={cn("break-all text-sm leading-snug", mono && "font-mono")}>
-          {value}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className={cn("break-all text-sm leading-snug", mono && "font-mono")}>
+            {value}
+          </p>
+          {badge}
+        </div>
       </div>
       {canCopy ? (
         <button
@@ -184,7 +187,6 @@ export function SettingsInfoPanel({
   sv2AuthorityPublicKey = null,
   currentVersion,
   hasUpdate,
-  latestTag,
   onOpenUpdate,
   lifetime,
 }: {
@@ -193,7 +195,6 @@ export function SettingsInfoPanel({
   sv2AuthorityPublicKey?: string | null;
   currentVersion: string;
   hasUpdate: boolean;
-  latestTag?: string | null;
   onOpenUpdate?: () => void;
   lifetime?: PoolLifetimeStats | null;
 }) {
@@ -220,14 +221,16 @@ export function SettingsInfoPanel({
     sv2AuthorityPublicKey?.trim() ||
     (deployment === "demo" ? DEMO_SV2_KEY : "");
 
-  const updateAvailableValue =
-    deployment === "demo"
-      ? "No"
-      : hasUpdate
-        ? latestTag
-          ? `Yes (${latestTag})`
-          : "Yes"
-        : "No";
+  const updateBadge =
+    deployment !== "demo" && hasUpdate ? (
+      <button
+        type="button"
+        onClick={onOpenUpdate}
+        className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-300 transition-colors hover:bg-amber-500/20"
+      >
+        Update Available
+      </button>
+    ) : null;
 
   const paneCopy =
     pane === "pool"
@@ -322,31 +325,12 @@ export function SettingsInfoPanel({
             mono
           />
           <InfoRow
-            label="Server platform"
-            value={stats?.platform || "—"}
-            copyable={false}
-          />
-          <InfoRow
             label="App version"
             value={currentVersion || "—"}
             mono
             copyable={false}
+            badge={updateBadge}
           />
-          <div className="flex items-start gap-2 border-b border-border/40 py-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted-foreground">Update available</p>
-              <p className="text-sm leading-snug">{updateAvailableValue}</p>
-            </div>
-            {hasUpdate && onOpenUpdate ? (
-              <button
-                type="button"
-                onClick={onOpenUpdate}
-                className="mt-0.5 shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs transition-colors hover:bg-muted/40"
-              >
-                View update
-              </button>
-            ) : null}
-          </div>
           <InfoRow
             label="Shares"
             value={

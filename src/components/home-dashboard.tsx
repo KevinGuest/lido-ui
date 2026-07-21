@@ -271,7 +271,7 @@ export function HomeDashboard({
             <CardHeader className="pb-2">
               <CardDescription>Best difficulty</CardDescription>
               <CardTitle className="text-2xl tabular-nums">
-                {pool.bestDifficulty ? numberSuffix(pool.bestDifficulty) : "n/a"}
+                {pool.bestDifficulty ? numberSuffix(pool.bestDifficulty) : "—"}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -288,11 +288,12 @@ export function HomeDashboard({
 
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="min-w-0 lg:col-span-2">
-            <DifficultyAdjustmentBar data={difficultyAdjustment} />
+            <DifficultyAdjustmentBar data={difficultyAdjustment} network={network} />
           </div>
           <HalvingCountdown
             height={network.height}
             avgBlockMs={difficultyAdjustment?.timeAvgMs ?? 0}
+            network={network}
           />
         </div>
 
@@ -321,7 +322,7 @@ export function HomeDashboard({
           >
             Public Pool
           </a>
-          , available on Umbrel. Try the demo and see if it&apos;s for you.
+          .
         </p>
       </div>
     </div>

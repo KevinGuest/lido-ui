@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { feeRateSats, hashSuffix, numberSuffix } from "@/lib/format";
 import type { NetworkInfo } from "@/lib/mock-data";
+import { isNodeSyncing, syncProgressPct } from "@/lib/mock-data";
 import { cn, hoverLabelClassName } from "@/lib/utils";
 
 function formatNetworkName(chain: string) {
@@ -28,10 +29,24 @@ function formatNetworkName(chain: string) {
 
 export function NetworkHeightPill({ network }: { network: NetworkInfo }) {
   const [open, setOpen] = useState(false);
+  const syncing = isNodeSyncing(network);
+  const pct = syncProgressPct(network);
 
   const rows = [
     { label: "Network", value: formatNetworkName(network.chain) },
     { label: "Block height", value: network.height.toLocaleString() },
+    {
+      label: "Headers (tip)",
+      value:
+        network.headers == null ? "n/a" : network.headers.toLocaleString(),
+    },
+    {
+      label: "Sync progress",
+      value:
+        network.verificationProgress == null
+          ? "n/a"
+          : `${(network.verificationProgress * 100).toFixed(1)}%`,
+    },
     {
       label: "Next height",
       value: network.nextHeight == null ? "n/a" : network.nextHeight.toLocaleString(),
@@ -84,6 +99,11 @@ export function NetworkHeightPill({ network }: { network: NetworkInfo }) {
         <span className="tabular-nums text-sm font-medium">
           {network.height.toLocaleString()}
         </span>
+        {syncing ? (
+          <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-300">
+            Syncing {pct.toFixed(0)}%
+          </span>
+        ) : null}
         <span
           className={cn(
             "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",

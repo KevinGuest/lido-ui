@@ -28,6 +28,8 @@ const EMPTY_NETWORK: NetworkInfo = {
   currentBlockWeight: null,
   currentBlockTx: null,
   pooledTx: null,
+  headers: null,
+  verificationProgress: null,
 };
 
 const TABS: { id: SettingsTab; label: string }[] = [
@@ -74,9 +76,13 @@ export function SettingsPage({
           currentblockweight?: number;
           currentblocktx?: number;
           pooledtx?: number;
+          headers?: number | null;
+          verificationprogress?: number | null;
           next?: { height?: number };
         };
         if (cancelled) return;
+        const headersRaw = data.headers;
+        const progressRaw = data.verificationProgress ?? data.verificationprogress;
         setNetwork({
           height: Number(data.height ?? data.blocks) || 0,
           nextHeight:
@@ -98,6 +104,14 @@ export function SettingsPage({
           pooledTx:
             data.pooledTx ??
             (data.pooledtx == null ? null : Number(data.pooledtx)),
+          headers:
+            headersRaw == null || !Number.isFinite(Number(headersRaw))
+              ? null
+              : Number(headersRaw),
+          verificationProgress:
+            progressRaw == null || !Number.isFinite(Number(progressRaw))
+              ? null
+              : Number(progressRaw),
         });
       } catch {
         // keep last
@@ -161,7 +175,6 @@ export function SettingsPage({
             sv2AuthorityPublicKey={sv2AuthorityPublicKey}
             currentVersion={update.currentVersion}
             hasUpdate={update.hasUpdate}
-            latestTag={update.release?.tag}
             onOpenUpdate={update.openDialog}
             lifetime={lifetime}
           />

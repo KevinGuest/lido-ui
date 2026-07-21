@@ -133,7 +133,6 @@ type LiveInfoResponse = {
   uptime?: string | Date;
   /** First pool start — persists across restarts for chart date range. */
   startedAt?: string | Date;
-  platform?: string;
   sharesAccepted?: number;
   sharesRejected?: number;
   bestDifficulty?: number | string;
@@ -161,6 +160,7 @@ function parsePoolUptimeSeconds(uptime: unknown): number | null {
 
 type LiveNetworkResponse = {
   blocks?: number;
+  height?: number;
   difficulty?: number;
   networkhashps?: number;
   chain?: string;
@@ -168,12 +168,18 @@ type LiveNetworkResponse = {
   currentblockweight?: number;
   currentblocktx?: number;
   pooledtx?: number;
+  headers?: number | null;
+  verificationprogress?: number | null;
+  verificationProgress?: number | null;
   next?: { height?: number };
 };
 
 function mapNetwork(raw: LiveNetworkResponse | null, fallbackHeight: number): NetworkInfo {
+  const height = Number(raw?.height ?? raw?.blocks) || fallbackHeight;
+  const headersRaw = raw?.headers;
+  const progressRaw = raw?.verificationProgress ?? raw?.verificationprogress;
   return {
-    height: Number(raw?.blocks) || fallbackHeight,
+    height,
     nextHeight: raw?.next?.height != null ? Number(raw.next.height) : null,
     difficulty: Number(raw?.difficulty) || 0,
     networkHashrate: Number(raw?.networkhashps) || 0,
@@ -183,6 +189,14 @@ function mapNetwork(raw: LiveNetworkResponse | null, fallbackHeight: number): Ne
       raw?.currentblockweight == null ? null : Number(raw.currentblockweight),
     currentBlockTx: raw?.currentblocktx == null ? null : Number(raw.currentblocktx),
     pooledTx: raw?.pooledtx == null ? null : Number(raw.pooledtx),
+    headers:
+      headersRaw == null || !Number.isFinite(Number(headersRaw))
+        ? null
+        : Number(headersRaw),
+    verificationProgress:
+      progressRaw == null || !Number.isFinite(Number(progressRaw))
+        ? null
+        : Number(progressRaw),
   };
 }
 
@@ -525,11 +539,12 @@ function emptyLiveDashboard(): DashboardPayload {
       currentBlockWeight: null,
       currentBlockTx: null,
       pooledTx: null,
+      headers: null,
+      verificationProgress: null,
     },
     difficultyAdjustment: null,
     uptimeSeconds: null,
     overallUptimeSeconds: null,
-    platform: null,
     sharesAccepted: 0,
     sharesRejected: 0,
     sv2AuthorityPublicKey: null,
@@ -632,7 +647,6 @@ export async function getDashboard(): Promise<DashboardPayload> {
     uptimeSeconds: parsePoolUptimeSeconds(info.uptime),
     overallUptimeSeconds:
       typeof info.overallUptimeSeconds === "number" ? info.overallUptimeSeconds : null,
-    platform: info.platform?.trim() || null,
     sharesAccepted: Number(info.sharesAccepted) || 0,
     sharesRejected: Number(info.sharesRejected) || 0,
     sv2AuthorityPublicKey,

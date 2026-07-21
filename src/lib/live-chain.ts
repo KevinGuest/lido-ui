@@ -117,6 +117,9 @@ export function applyLiveChainSnapshot(
     chain: "main",
     minFeeBtcKvB: live.minFeeBtcKvB ?? dashboard.network.minFeeBtcKvB,
     pooledTx: live.pooledTx ?? dashboard.network.pooledTx,
+    // Keep IBD fields from the node; mempool tip must not invent sync state.
+    headers: dashboard.network.headers,
+    verificationProgress: dashboard.network.verificationProgress,
   };
 
   return {

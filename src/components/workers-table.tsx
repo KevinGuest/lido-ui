@@ -280,7 +280,7 @@ function WorkerDialog({
       value: (
         <DetailValue>
           <Flame className="size-3.5 text-orange-500" strokeWidth={1.75} />
-          {worker.bestDifficulty ? numberSuffix(worker.bestDifficulty) : "n/a"}
+          {worker.bestDifficulty ? numberSuffix(worker.bestDifficulty) : "—"}
         </DetailValue>
       ),
     },

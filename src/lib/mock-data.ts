@@ -23,7 +23,39 @@ export type NetworkInfo = {
   currentBlockWeight: number | null;
   currentBlockTx: number | null;
   pooledTx: number | null;
+  /** Chain tip headers from getblockchaininfo (IBD). */
+  headers?: number | null;
+  /** 0–1 from getblockchaininfo.verificationprogress. */
+  verificationProgress?: number | null;
 };
+
+/** True while Bitcoin Core is still catching up (IBD). */
+export function isNodeSyncing(network: NetworkInfo): boolean {
+  if (
+    network.verificationProgress != null &&
+    Number.isFinite(network.verificationProgress)
+  ) {
+    return network.verificationProgress < 0.999;
+  }
+  if (network.headers != null && network.headers > 0) {
+    return network.height < network.headers;
+  }
+  return false;
+}
+
+/** 0–100 IBD progress for sync-gated UI. */
+export function syncProgressPct(network: NetworkInfo): number {
+  if (
+    network.verificationProgress != null &&
+    Number.isFinite(network.verificationProgress)
+  ) {
+    return Math.min(100, Math.max(0, network.verificationProgress * 100));
+  }
+  if (network.headers != null && network.headers > 0) {
+    return Math.min(100, Math.max(0, (network.height / network.headers) * 100));
+  }
+  return 0;
+}
 
 export type DifficultyAdjustment = {
   progressPercent: number;
@@ -85,8 +117,6 @@ export type DashboardPayload = {
   uptimeSeconds: number | null;
   /** Cumulative process uptime across all Lido sessions. */
   overallUptimeSeconds?: number | null;
-  /** Host OS label from the pool process (Linux, Windows, …). */
-  platform?: string | null;
   sharesAccepted?: number;
   sharesRejected?: number;
   /** Live pool SV2 authority pubkey for Connect (Noise auth). */
@@ -666,6 +696,8 @@ export function buildMockDashboard(now = Date.now()): DashboardPayload {
       currentBlockWeight: 3_992_140,
       currentBlockTx: 3_210,
       pooledTx: 4_800,
+      headers: blockHeight,
+      verificationProgress: 1,
     },
     difficultyAdjustment: {
       progressPercent: 42.5,
@@ -679,7 +711,6 @@ export function buildMockDashboard(now = Date.now()): DashboardPayload {
     },
     uptimeSeconds: mockSessionUptimeSeconds(now),
     overallUptimeSeconds: mockLifetimeUptimeSeconds(now),
-    platform: "Linux",
     sharesAccepted: 512_840,
     sharesRejected: 1_284,
     foundBlocks: [

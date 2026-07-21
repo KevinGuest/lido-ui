@@ -34,7 +34,6 @@ export default async function SettingsRoute() {
     network = dashboard.network;
     sv2AuthorityPublicKey = dashboard.sv2AuthorityPublicKey ?? null;
     lifetime = {
-      platform: dashboard.platform ?? (deployment === "demo" ? "Linux" : null),
       sharesAccepted: dashboard.sharesAccepted ?? 0,
       sharesRejected: dashboard.sharesRejected ?? 0,
       bestDifficulty: dashboard.pool.bestDifficulty ?? 0,

@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
-import type { DifficultyAdjustment } from "@/lib/mock-data";
+import type { DifficultyAdjustment, NetworkInfo } from "@/lib/mock-data";
+import { isNodeSyncing, syncProgressPct } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 const EPOCH_BLOCKS = 2016;
@@ -22,9 +23,41 @@ function changeColor(value: number) {
 
 export function DifficultyAdjustmentBar({
   data,
+  network,
 }: {
   data: DifficultyAdjustment | null;
+  network: NetworkInfo;
 }) {
+  if (isNodeSyncing(network)) {
+    const pct = syncProgressPct(network);
+    const headers = network.headers ?? network.height;
+    return (
+      <Card size="sm" className="h-full">
+        <CardContent className="flex h-full flex-col justify-between gap-2.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+            <p className="text-muted-foreground">Average block time</p>
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-300">
+              Waiting for node sync
+            </span>
+          </div>
+          <div className="relative h-1.5 overflow-hidden rounded-sm bg-muted">
+            <div
+              className="absolute inset-y-0 left-0 rounded-sm bg-muted-foreground/40 transition-[width] duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <div className="flex flex-wrap justify-between gap-2 text-xs text-amber-300/90">
+            <span>
+              Node at {network.height.toLocaleString()} · chain tip{" "}
+              {headers.toLocaleString()} ({pct.toFixed(1)}%)
+            </span>
+            <span>Difficulty epoch hidden until synced</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (!data) return null;
 
   const progress = Math.min(100, Math.max(0, data.progressPercent));
