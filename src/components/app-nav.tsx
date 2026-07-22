@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  ArrowLeftRight,
+  Bitcoin,
   DoorOpen,
   Heart,
   Menu,
@@ -22,7 +22,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { DeploymentKind } from "@/lib/app-meta";
@@ -176,63 +175,6 @@ export function AppNav({
                 </span>
               </button>
 
-              <button
-                type="button"
-                aria-label="Donate"
-                aria-haspopup="dialog"
-                aria-expanded={donateOpen}
-                onClick={() => setDonateOpen(true)}
-                className={cn(
-                  "group relative flex size-10 items-center justify-center rounded-md border transition-colors",
-                  donateOpen
-                    ? "border-transparent bg-foreground text-background"
-                    : "border-border bg-transparent text-foreground hover:bg-muted/40",
-                )}
-              >
-                <Heart
-                  className={cn(
-                    "size-[1.15rem] transition-colors",
-                    donateOpen
-                      ? "fill-red-500 text-red-500"
-                      : "group-hover:fill-red-500 group-hover:text-red-500 group-focus-visible:fill-red-500 group-focus-visible:text-red-500",
-                  )}
-                  strokeWidth={1.75}
-                />
-                <span
-                  className={cn(
-                    "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
-                    hoverLabelClassName,
-                    "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
-                  )}
-                >
-                  Donate
-                </span>
-              </button>
-
-              {publicMode ? (
-                <a
-                  href="https://cspread.ca"
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Canadian Spread"
-                  className={cn(
-                    "group relative flex size-10 items-center justify-center rounded-md border transition-colors",
-                    "border-border bg-transparent text-foreground hover:bg-muted/40",
-                  )}
-                >
-                  <ArrowLeftRight className="size-[1.15rem]" strokeWidth={1.75} />
-                  <span
-                    className={cn(
-                      "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
-                      hoverLabelClassName,
-                      "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
-                    )}
-                  >
-                    CSpread
-                  </span>
-                </a>
-              ) : null}
-
               {publicMode ? (
                 loggedInAddress ? (
                   <button
@@ -287,6 +229,63 @@ export function AppNav({
                   <Settings className="size-[1.15rem]" strokeWidth={1.75} />
                 </NavIconButton>
               )}
+
+              {publicMode ? (
+                <a
+                  href="https://cspread.ca"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Canadian Spread"
+                  className={cn(
+                    "group relative flex size-10 items-center justify-center rounded-md border transition-colors",
+                    "border-border bg-transparent text-foreground hover:bg-muted/40",
+                  )}
+                >
+                  <Bitcoin className="size-[1.15rem]" strokeWidth={1.75} />
+                  <span
+                    className={cn(
+                      "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+                      hoverLabelClassName,
+                      "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+                    )}
+                  >
+                    Canadian Spread
+                  </span>
+                </a>
+              ) : null}
+
+              <button
+                type="button"
+                aria-label="Donate"
+                aria-haspopup="dialog"
+                aria-expanded={donateOpen}
+                onClick={() => setDonateOpen(true)}
+                className={cn(
+                  "group relative flex size-10 items-center justify-center rounded-md border transition-colors",
+                  donateOpen
+                    ? "border-transparent bg-foreground text-background"
+                    : "border-border bg-transparent text-foreground hover:bg-muted/40",
+                )}
+              >
+                <Heart
+                  className={cn(
+                    "size-[1.15rem] transition-colors",
+                    donateOpen
+                      ? "fill-red-500 text-red-500"
+                      : "group-hover:fill-red-500 group-hover:text-red-500 group-focus-visible:fill-red-500 group-focus-visible:text-red-500",
+                  )}
+                  strokeWidth={1.75}
+                />
+                <span
+                  className={cn(
+                    "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+                    hoverLabelClassName,
+                    "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+                  )}
+                >
+                  Donate
+                </span>
+              </button>
             </>
           )}
         </div>
@@ -320,21 +319,6 @@ export function AppNav({
                   <Unplug className="size-4" strokeWidth={1.75} />
                   Connect
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setDonateOpen(true)}>
-                  <Heart className="size-4" strokeWidth={1.75} />
-                  Donate
-                </DropdownMenuItem>
-                {publicMode ? (
-                  <DropdownMenuItem
-                    onClick={() =>
-                      window.open("https://cspread.ca", "_blank", "noopener,noreferrer")
-                    }
-                  >
-                    <ArrowLeftRight className="size-4" strokeWidth={1.75} />
-                    CSpread
-                  </DropdownMenuItem>
-                ) : null}
-                <DropdownMenuSeparator />
                 {publicMode ? (
                   loggedInAddress ? (
                     <DropdownMenuItem onClick={onLogout}>
@@ -353,6 +337,20 @@ export function AppNav({
                     Settings
                   </DropdownMenuItem>
                 )}
+                {publicMode ? (
+                  <DropdownMenuItem
+                    onClick={() =>
+                      window.open("https://cspread.ca", "_blank", "noopener,noreferrer")
+                    }
+                  >
+                    <Bitcoin className="size-4" strokeWidth={1.75} />
+                    Canadian Spread
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem onClick={() => setDonateOpen(true)}>
+                  <Heart className="size-4" strokeWidth={1.75} />
+                  Donate
+                </DropdownMenuItem>
               </>
             )}
           </DropdownMenuContent>
@@ -366,6 +364,7 @@ export function AppNav({
             onClose={() => setConnectOpen(false)}
             stratumUrl={stratumUrl}
             initialAuthorityPublicKey={sv2AuthorityPublicKey}
+            allowAuthorityRotate={!publicMode}
           />
           <DonateDialog open={donateOpen} onClose={() => setDonateOpen(false)} />
           {publicMode && onLogin ? (

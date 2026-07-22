@@ -12,11 +12,13 @@ function env(name: string): string {
 }
 
 function useMockData() {
+  // Explicit local override — e.g. preview public UI without a live pool.
+  if (env("LIDO_USE_MOCK") === "true") return true;
   // Public (lido.wtf) always hits the live pool API — mock is demo/Pages only.
   if (env("NEXT_PUBLIC_LIDO_PUBLIC") === "true" || env("LIDO_PUBLIC") === "true") {
     return false;
   }
-  return env("GITHUB_PAGES") === "true" || env("LIDO_USE_MOCK") === "true";
+  return env("GITHUB_PAGES") === "true";
 }
 
 function poolBaseUrl() {

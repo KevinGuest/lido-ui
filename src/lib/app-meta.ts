@@ -3,6 +3,7 @@ export const APP_VERSION = process.env.NEXT_PUBLIC_LIDO_VERSION ?? "0.0.0";
 export const GITHUB_RELEASES_URL = "https://github.com/KevinGuest/lido-ui/releases";
 export const GITHUB_REPO_URL = "https://github.com/KevinGuest/lido-ui";
 export const UMBREL_APP_URL = "https://github.com/KevinGuest/lido-app";
+export const PUBLIC_POOL_GITHUB_URL = "https://github.com/benjamin-wilson/public-pool";
 
 export type DeploymentKind = "demo" | "umbrel" | "self-hosted" | "public";
 

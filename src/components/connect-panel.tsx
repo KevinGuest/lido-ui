@@ -142,19 +142,24 @@ export function ConnectDialog({
   stratumUrl,
   usernameHint = "<btc-address>.<worker-name>",
   initialAuthorityPublicKey = null,
+  allowAuthorityRotate = true,
 }: {
   open: boolean;
   onClose: () => void;
   stratumUrl: string;
   usernameHint?: string;
   initialAuthorityPublicKey?: string | null;
+  /** False on public hosted pools — rotation would brick every shared SV2 miner. */
+  allowAuthorityRotate?: boolean;
 }) {
   const [protocol, setProtocol] = useState<StratumProtocol>("sv1");
   const [authorityPublicKey, setAuthorityPublicKey] = useState(
     () => initialAuthorityPublicKey?.trim() || (IS_DEMO ? DEMO_SV2_AUTHORITY_PUBLIC_KEY : ""),
   );
   const [authorityLoading, setAuthorityLoading] = useState(false);
-  const [authorityRotatable, setAuthorityRotatable] = useState(!IS_DEMO);
+  const [authorityRotatable, setAuthorityRotatable] = useState(
+    !IS_DEMO && allowAuthorityRotate,
+  );
   const [authorityRotating, setAuthorityRotating] = useState(false);
 
   useEffect(() => {
@@ -179,12 +184,13 @@ export function ConnectDialog({
         const info = await fetchSv2Info();
         if (cancelled) return;
         if (info.authorityPublicKey) setAuthorityPublicKey(info.authorityPublicKey);
-        setAuthorityRotatable(Boolean(info.rotatable));
+        setAuthorityRotatable(allowAuthorityRotate && Boolean(info.rotatable));
       } catch {
         if (cancelled) return;
         if (IS_DEMO && !authorityPublicKey) {
           setAuthorityPublicKey(DEMO_SV2_AUTHORITY_PUBLIC_KEY);
         }
+        setAuthorityRotatable(false);
       } finally {
         if (!cancelled) setAuthorityLoading(false);
       }
@@ -195,7 +201,7 @@ export function ConnectDialog({
     };
     // Refresh when dialog opens; seed covers first paint.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional open-only refresh
-  }, [open]);
+  }, [open, allowAuthorityRotate]);
 
   const endpoint = useMemo(
     () =>
@@ -211,10 +217,9 @@ export function ConnectDialog({
     : authorityPublicKey || "Unavailable — update Lido / check pool logs";
 
   async function onRefreshAuthority() {
-    if (!authorityRotatable || authorityRotating || IS_DEMO) return;
+    if (!allowAuthorityRotate || !authorityRotatable || authorityRotating || IS_DEMO) return;
     const ok = window.confirm(
       "Generate a new SV2 authority key?\n\n"
-        + "This stays fixed across Lido updates until you refresh again. "
         + "You will need to paste the new key into every miner.",
     );
     if (!ok) return;
@@ -223,7 +228,7 @@ export function ConnectDialog({
     try {
       const next = await rotateSv2AuthorityKey();
       setAuthorityPublicKey(next);
-      setAuthorityRotatable(true);
+      setAuthorityRotatable(allowAuthorityRotate);
     } catch (error) {
       window.alert((error as Error).message || "Could not refresh authority key");
     } finally {
@@ -367,7 +372,7 @@ export function ConnectDialog({
                 />
                 <p className="text-sm text-muted-foreground">
                   {protocol === "sv2"
-                    ? `Use host:${stratumV2Port()} plus this authority public key in your miner’s SV2 settings. The key stays the same across Lido updates unless you refresh it.`
+                    ? `Use host:${stratumV2Port()} plus this authority public key in your miner’s SV2 settings.`
                     : "Workers appear automatically once they submit shares."}
                 </p>
               </div>

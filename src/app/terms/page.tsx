@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { GITHUB_REPO_URL, UMBREL_APP_URL } from "@/lib/app-meta";
+import { GITHUB_REPO_URL, PUBLIC_POOL_GITHUB_URL, UMBREL_APP_URL } from "@/lib/app-meta";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -62,16 +62,16 @@ export default function TermsPage() {
         <p className="text-sm text-muted-foreground">Effective July 21, 2026</p>
         <p className="text-sm leading-relaxed text-muted-foreground">
           These terms apply to the hosted Lido pool at{" "}
-          <span className="text-foreground">lido.wtf</span>. Adapted from the{" "}
+          <span className="text-foreground">lido.wtf</span>. Lido is a fork of{" "}
           <a
-            href="https://web.public-pool.io/#/terms"
+            href={PUBLIC_POOL_GITHUB_URL}
             target="_blank"
             rel="noreferrer"
             className="underline underline-offset-4 hover:text-foreground"
           >
-            Public Pool terms
+            Public Pool
           </a>
-          .
+          ; credit to Benjamin Wilson and contributors.
         </p>
       </div>
 
@@ -102,6 +102,15 @@ export default function TermsPage() {
           className="underline underline-offset-4 hover:text-foreground"
         >
           Umbrel app
+        </a>
+        {" · "}
+        <a
+          href={PUBLIC_POOL_GITHUB_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-4 hover:text-foreground"
+        >
+          Public Pool
         </a>
       </p>
     </main>

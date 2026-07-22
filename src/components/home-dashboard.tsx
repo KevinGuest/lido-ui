@@ -599,7 +599,7 @@ export function HomeDashboard({
             >
               Public Pool
             </a>
-            . Credit to Benjamin Wilson and contributors.
+            .
           </p>
           <Link
             href="/terms"

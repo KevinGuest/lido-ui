@@ -112,6 +112,14 @@ function MinerDetailDialog({
     },
     { label: "Device", value: <span>{deviceLabel(worker.userAgent)}</span> },
     {
+      label: "Address",
+      value: (
+        <span className="max-w-[240px] truncate font-mono text-xs">
+          {worker.address || "n/a"}
+        </span>
+      ),
+    },
+    {
       label: "Hashrate",
       value: (
         <DetailValue>
