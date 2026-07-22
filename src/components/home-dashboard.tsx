@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
 import { useUpdateAvailability } from "@/hooks/use-update-availability";
 import { useAddressSession } from "@/lib/address-session";
 import { addressHasPoolWorkers } from "@/lib/address-auth";
@@ -512,7 +513,9 @@ export function HomeDashboard({
             <CardHeader className="pb-2">
               <CardDescription>Uptime</CardDescription>
               <CardTitle className="text-2xl tabular-nums">
-                {uptimeSeconds == null ? "n/a" : formatUptime(uptimeSeconds)}
+                {uptimeSeconds == null || uptimeSeconds <= 0
+                  ? "—"
+                  : formatUptime(uptimeSeconds)}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -536,7 +539,7 @@ export function HomeDashboard({
             <CardHeader className="pb-2">
               <CardDescription>Network difficulty</CardDescription>
               <CardTitle className="text-2xl tabular-nums">
-                {network.difficulty ? numberSuffix(network.difficulty) : "n/a"}
+                {network.difficulty ? numberSuffix(network.difficulty) : "—"}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -596,7 +599,10 @@ export function HomeDashboard({
           </p>
           <Link
             href="/terms"
-            className="shrink-0 text-left underline underline-offset-4 transition-opacity hover:text-foreground sm:text-right"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "default" }),
+              "shrink-0 self-start bg-transparent hover:bg-muted/40 sm:self-auto dark:bg-transparent dark:hover:bg-muted/40",
+            )}
           >
             Terms of Service
           </Link>

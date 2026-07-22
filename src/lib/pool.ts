@@ -2,7 +2,7 @@ import { unstable_noStore as noStore } from "next/cache";
 
 import { applyLiveChainSnapshot, fetchLiveChainSnapshot } from "@/lib/live-chain";
 import { deviceLabel } from "@/lib/device-label";
-import { buildMockDashboard, type ChartPoint, type DashboardPayload, type DifficultyAdjustment, type FoundBlock, type MinerChartSeries, type NetworkInfo, type Worker } from "@/lib/mock-data";
+import { buildMockDashboard, type ChartPoint, type DashboardPayload, type FoundBlock, type MinerChartSeries, type NetworkInfo, type Worker } from "@/lib/mock-data";
 import { discoverMinerHosts } from "@/lib/network-scan";
 import { configuredStratumUrl as configuredStratumUrlPublic } from "@/lib/pool-public";
 
@@ -158,9 +158,14 @@ type LiveInfoResponse = {
 
 function parsePoolUptimeSeconds(uptime: unknown): number | null {
   if (uptime == null) return null;
+  // Already elapsed seconds (rare) — keep small integers as-is.
+  if (typeof uptime === "number" && Number.isFinite(uptime) && uptime >= 0 && uptime < 1e9) {
+    return Math.floor(uptime);
+  }
   const started = new Date(uptime as string | Date).getTime();
-  if (!Number.isFinite(started)) return null;
-  return Math.max(0, Math.floor((Date.now() - started) / 1000));
+  if (!Number.isFinite(started) || started <= 0) return null;
+  const seconds = Math.floor((Date.now() - started) / 1000);
+  return seconds > 0 ? seconds : null;
 }
 
 type LiveNetworkResponse = {
@@ -205,10 +210,9 @@ function mapNetwork(raw: LiveNetworkResponse | null, fallbackHeight: number): Ne
   };
 }
 
-async function loadDifficultyAdjustment(): Promise<DifficultyAdjustment | null> {
+async function loadLiveChain() {
   try {
-    const live = await fetchLiveChainSnapshot(mempoolBaseUrl());
-    return live.difficultyAdjustment;
+    return await fetchLiveChainSnapshot(mempoolBaseUrl());
   } catch {
     return null;
   }
@@ -579,12 +583,12 @@ export async function getDashboard(): Promise<DashboardPayload> {
     return emptyLiveDashboard();
   }
 
-  const [pool, info, networkRaw, difficultyAdjustment, poolWorkers, devices, sv2Info] =
+  const [pool, info, networkRaw, liveChain, poolWorkers, devices, sv2Info] =
     await Promise.all([
       fetchPool<LivePoolResponse>("/api/pool"),
       fetchPool<LiveInfoResponse>("/api/info"),
       fetchPool<LiveNetworkResponse>("/api/network").catch(() => null),
-      loadDifficultyAdjustment(),
+      loadLiveChain(),
       loadPoolConnectedWorkers(),
       loadDevices(),
       fetchPool<{ enabled?: boolean; authorityPublicKey?: string }>("/api/info/sv2").catch(
@@ -634,6 +638,26 @@ export async function getDashboard(): Promise<DashboardPayload> {
     : [];
 
   const network = mapNetwork(networkRaw, pool.blockHeight);
+  // Prefer node RPC; fill gaps from mempool (common on public hosts without bitcoind stats).
+  if (liveChain) {
+    if (!network.difficulty && liveChain.difficulty) {
+      network.difficulty = liveChain.difficulty;
+    }
+    if (!network.networkHashrate && liveChain.networkHashrate) {
+      network.networkHashrate = liveChain.networkHashrate;
+    }
+    if (!network.height && liveChain.height) {
+      network.height = liveChain.height;
+      network.nextHeight = liveChain.height + 1;
+    }
+    if (!network.minFeeBtcKvB && liveChain.minFeeBtcKvB) {
+      network.minFeeBtcKvB = liveChain.minFeeBtcKvB;
+    }
+    if (network.pooledTx == null && liveChain.pooledTx != null) {
+      network.pooledTx = liveChain.pooledTx;
+    }
+  }
+  const difficultyAdjustment = liveChain?.difficultyAdjustment ?? null;
   const sv2AuthorityPublicKey =
     sv2Info?.enabled && sv2Info.authorityPublicKey ? sv2Info.authorityPublicKey : null;
 

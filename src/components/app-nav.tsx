@@ -4,7 +4,15 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { DoorOpen, Heart, Menu, Search, Settings, Unplug } from "lucide-react";
+import {
+  ArrowLeftRight,
+  DoorOpen,
+  Heart,
+  Menu,
+  Search,
+  Settings,
+  Unplug,
+} from "lucide-react";
 
 import { AddressLoginDialog } from "@/components/address-login-dialog";
 import { ConnectDialog } from "@/components/connect-panel";
@@ -201,6 +209,28 @@ export function AppNav({
                 </span>
               </button>
 
+              <a
+                href="https://cspread.ca"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Canadian Spread"
+                className={cn(
+                  "group relative flex size-10 items-center justify-center rounded-md border transition-colors",
+                  "border-border bg-transparent text-foreground hover:bg-muted/40",
+                )}
+              >
+                <ArrowLeftRight className="size-[1.15rem]" strokeWidth={1.75} />
+                <span
+                  className={cn(
+                    "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+                    hoverLabelClassName,
+                    "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+                  )}
+                >
+                  CSpread
+                </span>
+              </a>
+
               {publicMode ? (
                 loggedInAddress ? (
                   <button
@@ -291,6 +321,14 @@ export function AppNav({
                 <DropdownMenuItem onClick={() => setDonateOpen(true)}>
                   <Heart className="size-4" strokeWidth={1.75} />
                   Donate
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.open("https://cspread.ca", "_blank", "noopener,noreferrer")
+                  }
+                >
+                  <ArrowLeftRight className="size-4" strokeWidth={1.75} />
+                  CSpread
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {publicMode ? (
