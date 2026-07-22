@@ -5,6 +5,7 @@ import { ArrowUpCircle } from "lucide-react";
 import { AppNav } from "@/components/app-nav";
 import { GitHubIcon } from "@/components/github-icon";
 import { LogoThemeToggle } from "@/components/logo-theme-toggle";
+import type { DeploymentKind } from "@/lib/app-meta";
 import { GITHUB_REPO_URL } from "@/lib/app-meta";
 import type { NetworkInfo } from "@/lib/mock-data";
 import { cn, hoverLabelClassName, hoverLabelRightClassName } from "@/lib/utils";
@@ -18,6 +19,11 @@ export function AppHeader({
   showUpdate = false,
   highlightUpdate = false,
   onUpdateClick,
+  deployment = "self-hosted",
+  loggedInAddress = null,
+  onLogin,
+  onLogout,
+  loginWorkers = [],
 }: {
   title?: string;
   subtitle?: string;
@@ -28,6 +34,12 @@ export function AppHeader({
   /** Auto-show the Update hover chip for a few seconds. */
   highlightUpdate?: boolean;
   onUpdateClick?: () => void;
+  deployment?: DeploymentKind;
+  loggedInAddress?: string | null;
+  onLogin?: (address: string) => void;
+  onLogout?: () => void;
+  /** Pool workers used to gate public address login. */
+  loginWorkers?: { address: string }[];
 }) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-4">
@@ -103,6 +115,11 @@ export function AppHeader({
         stratumConfigured={stratumConfigured}
         network={network}
         sv2AuthorityPublicKey={sv2AuthorityPublicKey}
+        deployment={deployment}
+        loggedInAddress={loggedInAddress}
+        onLogin={onLogin}
+        onLogout={onLogout}
+        loginWorkers={loginWorkers}
       />
     </header>
   );

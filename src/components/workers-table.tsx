@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Flame, List, MoreHorizontal, SlidersHorizontal, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, List, MoreHorizontal, SlidersHorizontal, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/table";
 import { RelativeTime } from "@/components/relative-time";
 import { ModalOverlay } from "@/components/modal-overlay";
+import { deviceLabel } from "@/lib/device-label";
 import { formatUptime, hashSuffix, numberSuffix } from "@/lib/format";
 import { minerColor } from "@/lib/miner-colors";
 import { minerInfoUrl } from "@/lib/miner-info-url";
@@ -156,19 +157,12 @@ function MinerNameCell({ worker }: { worker: ListedWorker }) {
   );
 }
 
-function deviceLabel(userAgent: string | null | undefined): string {
-  const raw = (userAgent || "").trim();
-  if (!raw) return "n/a";
-  // Older SV2 sessions stored vendor with a redundant /sv2 suffix.
-  return raw.replace(/\/sv2$/i, "") || "n/a";
-}
-
 function MinerDeviceCell({ worker }: { worker: ListedWorker }) {
   const label = deviceLabel(worker.userAgent);
   const href = minerInfoUrl({ ...worker, userAgent: label });
 
   if (!href) {
-    return <span className="text-muted-foreground">{label}</span>;
+    return <span className="text-muted-foreground">{label || "n/a"}</span>;
   }
 
   return (
@@ -279,7 +273,6 @@ function WorkerDialog({
       label: "Best diff",
       value: (
         <DetailValue>
-          <Flame className="size-3.5 text-orange-500" strokeWidth={1.75} />
           {worker.bestDifficulty ? numberSuffix(worker.bestDifficulty) : "—"}
         </DetailValue>
       ),
@@ -395,16 +388,19 @@ function WorkerDialog({
 export function WorkersTable({
   workers: liveWorkers,
   persistRemovals = true,
+  allowRemove = true,
 }: {
   workers: Worker[];
   /** When false (demo), Remove works for the session only and resets on refresh. */
   persistRemovals?: boolean;
+  /** Public Find-your-miners: hide remove (view-only). */
+  allowRemove?: boolean;
   /** @deprecated Online count is derived from remembered + live workers. */
   totalMiners?: number;
 }) {
   const { workers, onlineCount, removeWorker } = useRememberedWorkers(
     liveWorkers,
-    { persistRemovals },
+    { persistRemovals: allowRemove && persistRemovals },
   );
   const [sort, setSort] = useState<SortKey>("hashrate");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -459,7 +455,9 @@ export function WorkersTable({
             </Badge>
           </CardTitle>
           <CardDescription>
-            Miners stay listed after they disconnect. Use the row menu to remove one.
+            {allowRemove
+              ? "Miners stay listed after they disconnect. Use the row menu to remove one."
+              : "Miners connected under this address."}
           </CardDescription>
           <CardAction>
             <div className="relative z-20 flex flex-wrap items-center justify-end gap-1.5">
@@ -553,20 +551,23 @@ export function WorkersTable({
                 <TableHead className="hidden text-right md:table-cell">Shares</TableHead>
                 <TableHead className="text-right">Uptime</TableHead>
                 <TableHead className="hidden text-right md:table-cell">Last seen</TableHead>
-                <TableHead className="hidden w-10 md:table-cell">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
+                {allowRemove ? (
+                  <TableHead className="hidden w-10 md:table-cell">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                ) : null}
               </TableRow>
             </TableHeader>
             <TableBody>
               {sorted.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={allowRemove ? 7 : 6}
                     className="h-24 text-center text-sm text-muted-foreground"
                   >
-                    No miner details yet. Open Connect to add miners — they show up here as they
-                    join.
+                    {allowRemove
+                      ? "No miner details yet. Open Connect to add miners — they show up here as they join."
+                      : "No miners for this address yet."}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -609,38 +610,40 @@ export function WorkersTable({
                     <TableCell className="hidden text-right tabular-nums text-muted-foreground md:table-cell">
                       <RelativeTime iso={worker.lastSeen} />
                     </TableCell>
-                    <TableCell className="hidden text-right md:table-cell">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          nativeButton
-                          className={cn(
-                            "inline-flex size-8 items-center justify-center rounded-md",
-                            "text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground",
-                          )}
-                          aria-label={`Actions for ${worker.name}`}
-                          onClick={(event) => event.stopPropagation()}
-                          onPointerDown={(event) => event.stopPropagation()}
-                        >
-                          <MoreHorizontal className="size-4" strokeWidth={1.75} />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="min-w-36 w-auto"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              removeWorker(worker);
-                              if (selectedId === worker.id) setSelectedId(null);
-                            }}
+                    {allowRemove ? (
+                      <TableCell className="hidden text-right md:table-cell">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            nativeButton
+                            className={cn(
+                              "inline-flex size-8 items-center justify-center rounded-md",
+                              "text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground",
+                            )}
+                            aria-label={`Actions for ${worker.name}`}
+                            onClick={(event) => event.stopPropagation()}
+                            onPointerDown={(event) => event.stopPropagation()}
                           >
-                            Remove
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+                            <MoreHorizontal className="size-4" strokeWidth={1.75} />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="min-w-36 w-auto"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                removeWorker(worker);
+                                if (selectedId === worker.id) setSelectedId(null);
+                              }}
+                            >
+                              Remove
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))
               )}
@@ -719,10 +722,14 @@ export function WorkersTable({
           worker={selected}
           rank={ranks.get(selected.id) ?? workers.length}
           onClose={() => setSelectedId(null)}
-          onRemove={() => {
-            removeWorker(selected);
-            setSelectedId(null);
-          }}
+          onRemove={
+            allowRemove
+              ? () => {
+                  removeWorker(selected);
+                  setSelectedId(null);
+                }
+              : undefined
+          }
         />
       ) : null}
     </>

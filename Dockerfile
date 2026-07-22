@@ -11,6 +11,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Public hosted pool UI (lido.wtf). Umbrel builds leave this unset.
+ARG NEXT_PUBLIC_LIDO_PUBLIC=
+ENV NEXT_PUBLIC_LIDO_PUBLIC=$NEXT_PUBLIC_LIDO_PUBLIC
 # Persist Next's compile cache across builds (BuildKit + GHA cache-from/to).
 # This is build-time only; fetch cache in the mount is not needed at runtime.
 RUN --mount=type=cache,target=/app/.next/cache \

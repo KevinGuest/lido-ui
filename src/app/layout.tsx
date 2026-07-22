@@ -18,11 +18,20 @@ import { cn } from "@/lib/utils";
 
 import "./globals.css";
 
-/** Public marketing site (lido.wtf) — not Umbrel / self-hosted builds. */
-const isPublicSite =
-  process.env.GITHUB_PAGES === "true" ||
-  process.env.NEXT_PUBLIC_LIDO_DEMO === "true" ||
-  process.env.LIDO_USE_MOCK === "true";
+/** Live pool (lido.wtf) — real pool UI, no demo banner. */
+const isPublicPool =
+  process.env.NEXT_PUBLIC_LIDO_PUBLIC === "true" ||
+  process.env.LIDO_PUBLIC === "true";
+
+/** Live Umbrel demo (try.lido.wtf, Pages, local mock) — not the hosted pool. */
+const isDemoSite =
+  !isPublicPool &&
+  (process.env.GITHUB_PAGES === "true" ||
+    process.env.NEXT_PUBLIC_LIDO_DEMO === "true" ||
+    process.env.LIDO_USE_MOCK === "true");
+
+/** SEO + JSON-LD for anything public-facing (live pool or demo). */
+const isPublicSite = isPublicPool || isDemoSite;
 
 const geist = Geist({
   subsets: ["latin"],
@@ -161,9 +170,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }}
         />
         <ThemeInit />
-        <ToastProvider offsetTopClassName={isPublicSite ? "top-14" : "top-4"}>
+        <ToastProvider offsetTopClassName={isDemoSite ? "top-14" : "top-4"}>
           <div id="lido-app">
-            {isPublicSite ? <DemoSiteBanner /> : null}
+            {isDemoSite ? <DemoSiteBanner /> : null}
             {children}
           </div>
         </ToastProvider>

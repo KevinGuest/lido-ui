@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { DoorOpen, Heart, Menu, Settings, Unplug } from "lucide-react";
+import { DoorOpen, Heart, Menu, Search, Settings, Unplug } from "lucide-react";
 
+import { AddressLoginDialog } from "@/components/address-login-dialog";
 import { ConnectDialog } from "@/components/connect-panel";
 import { DonateDialog } from "@/components/donate-dialog";
 import { NetworkHeightPill } from "@/components/network-height-card";
@@ -16,6 +17,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { DeploymentKind } from "@/lib/app-meta";
+import { shortenAddress } from "@/lib/bitcoin-address";
 import type { NetworkInfo } from "@/lib/mock-data";
 import { resolveStratumEndpoint } from "@/lib/stratum-url";
 import { cn, hoverLabelClassName } from "@/lib/utils";
@@ -82,16 +85,28 @@ export function AppNav({
   stratumConfigured = "",
   network,
   sv2AuthorityPublicKey = null,
+  deployment = "self-hosted",
+  loggedInAddress = null,
+  onLogin,
+  onLogout,
+  loginWorkers = [],
 }: {
   stratumConfigured?: string;
   network: NetworkInfo;
   sv2AuthorityPublicKey?: string | null;
+  deployment?: DeploymentKind;
+  loggedInAddress?: string | null;
+  onLogin?: (address: string) => void;
+  onLogout?: () => void;
+  loginWorkers?: { address: string }[];
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const settingsMode = pathname?.startsWith("/settings") ?? false;
+  const publicMode = deployment === "public";
+  const settingsMode = !publicMode && (pathname?.startsWith("/settings") ?? false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [donateOpen, setDonateOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const [stratumUrl, setStratumUrl] = useState("");
 
   useEffect(() => {
@@ -105,7 +120,6 @@ export function AppNav({
       <nav className="flex items-center gap-2" aria-label="Primary">
         <NetworkHeightPill network={network} />
 
-        {/* Desktop: existing icon row (unchanged) */}
         <div className="hidden items-center gap-2 md:flex">
           {settingsMode ? (
             <>
@@ -187,14 +201,64 @@ export function AppNav({
                 </span>
               </button>
 
-              <NavIconButton label="Settings" href="/settings">
-                <Settings className="size-[1.15rem]" strokeWidth={1.75} />
-              </NavIconButton>
+              {publicMode ? (
+                loggedInAddress ? (
+                  <button
+                    type="button"
+                    aria-label="Exit"
+                    onClick={onLogout}
+                    className={cn(
+                      "group relative flex size-10 items-center justify-center rounded-md border transition-colors",
+                      "border-border bg-transparent text-foreground hover:bg-muted/40",
+                    )}
+                  >
+                    <DoorOpen
+                      className="size-[1.15rem] transition-colors group-hover:text-red-500 group-focus-visible:text-red-500"
+                      strokeWidth={1.75}
+                    />
+                    <span
+                      className={cn(
+                        "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+                        hoverLabelClassName,
+                        "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+                      )}
+                    >
+                      Exit
+                    </span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    aria-label="Find your miners"
+                    onClick={() => setLoginOpen(true)}
+                    className={cn(
+                      "group relative flex size-10 items-center justify-center rounded-md border transition-colors",
+                      loginOpen
+                        ? "border-transparent bg-foreground text-background"
+                        : "border-border bg-transparent text-foreground hover:bg-muted/40",
+                    )}
+                  >
+                    <Search className="size-[1.15rem]" strokeWidth={1.75} />
+                    <span
+                      className={cn(
+                        "pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2",
+                        hoverLabelClassName,
+                        "opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100",
+                      )}
+                    >
+                      Find miners
+                    </span>
+                  </button>
+                )
+              ) : (
+                <NavIconButton label="Settings" href="/settings">
+                  <Settings className="size-[1.15rem]" strokeWidth={1.75} />
+                </NavIconButton>
+              )}
             </>
           )}
         </div>
 
-        {/* Mobile: tap menu */}
         <DropdownMenu>
           <DropdownMenuTrigger
             nativeButton
@@ -229,10 +293,24 @@ export function AppNav({
                   Donate
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/settings")}>
-                  <Settings className="size-4" strokeWidth={1.75} />
-                  Settings
-                </DropdownMenuItem>
+                {publicMode ? (
+                  loggedInAddress ? (
+                    <DropdownMenuItem onClick={onLogout}>
+                      <DoorOpen className="size-4" strokeWidth={1.75} />
+                      Exit ({shortenAddress(loggedInAddress)})
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem onClick={() => setLoginOpen(true)}>
+                      <Search className="size-4" strokeWidth={1.75} />
+                      Find your miners
+                    </DropdownMenuItem>
+                  )
+                ) : (
+                  <DropdownMenuItem onClick={() => router.push("/settings")}>
+                    <Settings className="size-4" strokeWidth={1.75} />
+                    Settings
+                  </DropdownMenuItem>
+                )}
               </>
             )}
           </DropdownMenuContent>
@@ -248,6 +326,14 @@ export function AppNav({
             initialAuthorityPublicKey={sv2AuthorityPublicKey}
           />
           <DonateDialog open={donateOpen} onClose={() => setDonateOpen(false)} />
+          {publicMode && onLogin ? (
+            <AddressLoginDialog
+              open={loginOpen}
+              onClose={() => setLoginOpen(false)}
+              onLogin={onLogin}
+              workers={loginWorkers}
+            />
+          ) : null}
         </>
       ) : null}
     </>

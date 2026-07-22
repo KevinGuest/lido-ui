@@ -4,9 +4,16 @@ export const GITHUB_RELEASES_URL = "https://github.com/KevinGuest/lido-ui/releas
 export const GITHUB_REPO_URL = "https://github.com/KevinGuest/lido-ui";
 export const UMBREL_APP_URL = "https://github.com/KevinGuest/lido-app";
 
-export type DeploymentKind = "demo" | "umbrel" | "self-hosted";
+export type DeploymentKind = "demo" | "umbrel" | "self-hosted" | "public";
 
 export function deploymentKind(): DeploymentKind {
+  // Live pool (lido.wtf) — checked before demo/mock so local public UI can use sample data.
+  if (
+    process.env.NEXT_PUBLIC_LIDO_PUBLIC === "true" ||
+    process.env.LIDO_PUBLIC === "true"
+  ) {
+    return "public";
+  }
   if (
     process.env.GITHUB_PAGES === "true" ||
     process.env.NEXT_PUBLIC_LIDO_DEMO === "true" ||
@@ -17,6 +24,10 @@ export function deploymentKind(): DeploymentKind {
   const api = (process.env.PUBLIC_POOL_API_URL ?? "").trim();
   if (api.includes("lido-app") || api.includes(":2299") || api.includes(":2019")) return "umbrel";
   return "self-hosted";
+}
+
+export function isPublicDeployment(kind: DeploymentKind = deploymentKind()): boolean {
+  return kind === "public";
 }
 
 export function updateDestinationUrl(kind: DeploymentKind): string {

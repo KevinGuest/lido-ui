@@ -11,6 +11,8 @@ export type FoundBlock = {
   height: number;
   address: string;
   worker: string;
+  /** Device / user-agent label when known. */
+  device?: string;
 };
 
 export type NetworkInfo = {
@@ -126,6 +128,13 @@ export type DashboardPayload = {
 const DEMO_ADDRESS = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh";
 
 /**
+ * Find-your-miners test address — 6 workers (3× Bitaxe Gamma + 3 other types).
+ * Use this in the Find your miners dialog while mocking.
+ */
+export const FIND_MINERS_TEST_ADDRESS =
+  "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq";
+
+/**
  * Fixed “process started” anchors so mock uptime advances like a real pool.
  * Session = current process (dashboard card); lifetime = all sessions (Settings → Info).
  * Avoid round week/month landmarks — looks staged.
@@ -210,6 +219,8 @@ type MockMinerSeed = {
   phase: number;
   /** When false, shown as disconnected in the miners table. */
   online?: boolean;
+  /** Payout / login address — defaults to DEMO_ADDRESS. */
+  address?: string;
 };
 
 const MOCK_MINER_SEEDS: MockMinerSeed[] = [
@@ -504,6 +515,167 @@ const MOCK_MINER_SEEDS: MockMinerSeed[] = [
   },
 ];
 
+/** Fixed set for Find-your-miners testing (not stress-cloned). */
+const FIND_MINERS_TEST_SEEDS: MockMinerSeed[] = [
+  {
+    id: "find-1",
+    name: "gamma-desk",
+    userAgent: "Bitaxe Gamma",
+    sessionId: "fnd1",
+    hashrate: 1.18e12,
+    shares: 9_420,
+    rejectedShares: 22,
+    bestDifficulty: 22_440_100,
+    sessionFraction: 0.91,
+    tempC: 59,
+    dashboardHost: "192.168.1.71",
+    phase: 30.1,
+    address: FIND_MINERS_TEST_ADDRESS,
+  },
+  {
+    id: "find-2",
+    name: "gamma-shelf",
+    userAgent: "Bitaxe Gamma",
+    sessionId: "fnd2",
+    hashrate: 1.09e12,
+    shares: 8_110,
+    rejectedShares: 31,
+    bestDifficulty: 18_220_400,
+    sessionFraction: 0.72,
+    tempC: 61,
+    dashboardHost: "192.168.1.72",
+    phase: 30.4,
+    address: FIND_MINERS_TEST_ADDRESS,
+  },
+  {
+    id: "find-3",
+    name: "gamma-rack",
+    userAgent: "Bitaxe Gamma",
+    sessionId: "fnd3",
+    hashrate: 1.21e12,
+    shares: 10_050,
+    rejectedShares: 19,
+    bestDifficulty: 31_880_200,
+    sessionFraction: 0.84,
+    tempC: 57,
+    dashboardHost: "192.168.1.73",
+    phase: 30.8,
+    address: FIND_MINERS_TEST_ADDRESS,
+  },
+  {
+    id: "find-4",
+    name: "nerdqaxe-lab",
+    userAgent: "NerdQAxe++",
+    sessionId: "fnd4",
+    hashrate: 1.42e12,
+    shares: 12_640,
+    rejectedShares: 28,
+    bestDifficulty: 44_120_000,
+    sessionFraction: 0.95,
+    tempC: 55,
+    dashboardHost: "192.168.1.74",
+    phase: 31.2,
+    address: FIND_MINERS_TEST_ADDRESS,
+  },
+  {
+    id: "find-5",
+    name: "s21-garage",
+    userAgent: "Antminer S21",
+    sessionId: "fnd5",
+    hashrate: 1.95e14,
+    shares: 54_200,
+    rejectedShares: 61,
+    bestDifficulty: 620_440_000,
+    sessionFraction: 0.88,
+    tempC: 48,
+    phase: 31.6,
+    address: FIND_MINERS_TEST_ADDRESS,
+  },
+  {
+    id: "find-6",
+    name: "nano-office",
+    userAgent: "Avalon Nano 3S",
+    sessionId: "fnd6",
+    hashrate: 3.8e12,
+    shares: 7_880,
+    rejectedShares: 14,
+    bestDifficulty: 12_660_000,
+    sessionFraction: 0.63,
+    tempC: 44,
+    phase: 32.0,
+    address: FIND_MINERS_TEST_ADDRESS,
+  },
+];
+
+/** Public mock stress: deterministic working count per device (1–300). */
+const MOCK_STRESS_WORKING_MAX = 300;
+
+function mockStressEnabled(): boolean {
+  return (
+    process.env.NEXT_PUBLIC_LIDO_PUBLIC === "true" ||
+    process.env.LIDO_PUBLIC === "true"
+  );
+}
+
+function mockWorkingCount(seed: MockMinerSeed): number {
+  if (seed.online === false) return 1;
+  if (!mockStressEnabled()) return 1;
+  let hash = 0;
+  for (let i = 0; i < seed.id.length; i += 1) {
+    hash = (hash * 31 + seed.id.charCodeAt(i)) >>> 0;
+  }
+  // Spread across device types so the table isn't all near the same count.
+  hash = (hash ^ Math.imul(seed.userAgent.length, 0x9e3779b1)) >>> 0;
+  return 1 + (hash % MOCK_STRESS_WORKING_MAX);
+}
+
+function cloneMockMinerSeed(seed: MockMinerSeed, cloneIndex: number): MockMinerSeed {
+  if (cloneIndex === 0) return seed;
+  const n = cloneIndex + 1;
+  return {
+    ...seed,
+    id: `${seed.id}-${n}`,
+    name: `${seed.name}-${n}`,
+    sessionId: `${seed.sessionId}${n.toString(16)}`,
+    phase: seed.phase + cloneIndex * 0.17,
+    hashrate: seed.hashrate * (0.88 + ((cloneIndex * 7) % 25) * 0.005),
+    shares: Math.max(1, Math.floor(seed.shares * (0.55 + ((cloneIndex * 3) % 20) * 0.02))),
+    rejectedShares: Math.max(
+      0,
+      Math.floor(seed.rejectedShares * (0.4 + ((cloneIndex * 5) % 15) * 0.04)),
+    ),
+    bestDifficulty: seed.bestDifficulty * (0.7 + ((cloneIndex * 11) % 30) * 0.01),
+    sessionFraction: Math.min(
+      1,
+      Math.max(0.05, seed.sessionFraction * (0.75 + ((cloneIndex * 13) % 20) * 0.012)),
+    ),
+    tempC: seed.tempC + ((cloneIndex * 3) % 9) - 4,
+    dashboardHost: seed.dashboardHost
+      ? seed.dashboardHost.replace(/\.\d+$/, `.${50 + (cloneIndex % 200)}`)
+      : undefined,
+  };
+}
+
+let cachedExpandedMockSeeds: MockMinerSeed[] | null = null;
+
+function getMockMinerSeeds(): MockMinerSeed[] {
+  if (!mockStressEnabled()) {
+    return [...MOCK_MINER_SEEDS, ...FIND_MINERS_TEST_SEEDS];
+  }
+  if (cachedExpandedMockSeeds) return cachedExpandedMockSeeds;
+  const expanded: MockMinerSeed[] = [];
+  for (const seed of MOCK_MINER_SEEDS) {
+    const count = mockWorkingCount(seed);
+    for (let i = 0; i < count; i += 1) {
+      expanded.push(cloneMockMinerSeed(seed, i));
+    }
+  }
+  // Keep the Find-your-miners set small and stable (not stress-cloned).
+  expanded.push(...FIND_MINERS_TEST_SEEDS);
+  cachedExpandedMockSeeds = expanded;
+  return expanded;
+}
+
 function hoursAgo(hours: number, now = Date.now()) {
   return new Date(now - hours * 60 * 60 * 1000).toISOString();
 }
@@ -619,14 +791,14 @@ function sumCharts(series: MinerChartSeries[], now = Date.now()): ChartPoint[] {
 }
 
 function buildMockWorkers(now = Date.now()): Worker[] {
-  return MOCK_MINER_SEEDS.map((miner, index) => {
+  return getMockMinerSeeds().map((miner, index) => {
     const session = mockWorkerSession(miner, index, now);
     return {
       id: miner.id,
       name: miner.name,
       userAgent: miner.userAgent,
       protocol: index % 5 === 0 ? "sv2" : "sv1",
-      address: DEMO_ADDRESS,
+      address: miner.address ?? DEMO_ADDRESS,
       sessionId: miner.sessionId,
       hashrate: session.online ? fluctuateHashrate(miner.hashrate, miner.phase, now) : 0,
       shares: miner.shares,
@@ -634,7 +806,7 @@ function buildMockWorkers(now = Date.now()): Worker[] {
       bestDifficulty: miner.bestDifficulty,
       uptimeSeconds: session.uptimeSeconds,
       lastSeen: session.online
-        ? new Date(now - (3_000 + index * 1_500)).toISOString()
+        ? new Date(now - (3_000 + (index % 200) * 1_500)).toISOString()
         : new Date(session.offlineSinceMs ?? now).toISOString(),
       startTime: session.online
         ? new Date(session.connectedSinceMs).toISOString()
@@ -653,19 +825,32 @@ function mockOfflineSinceMs(index: number, now: number) {
 
 /** Coherent demo payload — worker hashrates, miner charts, and pool total all align. */
 export function buildMockDashboard(now = Date.now()): DashboardPayload {
-  const minerCharts: MinerChartSeries[] = MOCK_MINER_SEEDS.map((miner, index) => {
+  // Charts stay on the original seed set (scaled by clone count) so stress mocks
+  // don't build thousands of per-miner series — plus the Find-your-miners test set.
+  const chartSeeds = [...MOCK_MINER_SEEDS, ...FIND_MINERS_TEST_SEEDS];
+  const minerCharts: MinerChartSeries[] = chartSeeds.map((miner, index) => {
     const session = mockWorkerSession(miner, index, now);
+    const scale =
+      miner.online === false
+        ? 0
+        : FIND_MINERS_TEST_SEEDS.some((seed) => seed.id === miner.id)
+          ? 1
+          : mockWorkingCount(miner);
+    const chart = buildMinerHashrateChart(miner.hashrate, miner.phase, now, {
+      connectedSinceMs: session.connectedSinceMs,
+      offlineSinceMs: session.offlineSinceMs,
+    });
     return {
       id: miner.id,
       name: miner.name,
-      chart: buildMinerHashrateChart(miner.hashrate, miner.phase, now, {
-        connectedSinceMs: session.connectedSinceMs,
-        offlineSinceMs: session.offlineSinceMs,
-      }),
+      chart:
+        scale <= 1
+          ? chart
+          : chart.map((point) => ({ ...point, data: point.data * scale })),
     };
   });
   const onlineCharts = minerCharts.filter((_, index) => {
-    return MOCK_MINER_SEEDS[index]?.online !== false;
+    return chartSeeds[index]?.online !== false;
   });
   const chart = sumCharts(onlineCharts, now);
   const workers = buildMockWorkers(now);
@@ -718,6 +903,13 @@ export function buildMockDashboard(now = Date.now()): DashboardPayload {
         height: blockHeight - 17_740,
         address: DEMO_ADDRESS,
         worker: "nerdqaxe-kitchen",
+        device: "NerdQAxe++",
+      },
+      {
+        height: blockHeight - 42_100,
+        address: FIND_MINERS_TEST_ADDRESS,
+        worker: "gamma-desk",
+        device: "Bitaxe Gamma",
       },
     ],
     workers,

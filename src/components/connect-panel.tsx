@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { browserPoolApiPath } from "@/lib/pool-browser-api";
-import { STRATUM_V1_PORT, STRATUM_V2_PORT, withStratumPort } from "@/lib/stratum-url";
+import { stratumV1Port, stratumV2Port, withStratumPort } from "@/lib/stratum-url";
 import {
   cn,
   copyToClipboard,
@@ -201,7 +201,7 @@ export function ConnectDialog({
     () =>
       withStratumPort(
         stratumUrl,
-        protocol === "sv1" ? STRATUM_V1_PORT : STRATUM_V2_PORT,
+        protocol === "sv1" ? stratumV1Port() : stratumV2Port(),
       ),
     [protocol, stratumUrl],
   );
@@ -367,7 +367,7 @@ export function ConnectDialog({
                 />
                 <p className="text-sm text-muted-foreground">
                   {protocol === "sv2"
-                    ? "Use host:2302 plus this authority public key in your miner’s SV2 settings. The key stays the same across Lido updates unless you refresh it."
+                    ? `Use host:${stratumV2Port()} plus this authority public key in your miner’s SV2 settings. The key stays the same across Lido updates unless you refresh it.`
                     : "Workers appear automatically once they submit shares."}
                 </p>
               </div>

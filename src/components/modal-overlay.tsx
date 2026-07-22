@@ -81,7 +81,8 @@ export function ModalOverlay({
       <div
         className={cn(
           // Center children; each dialog sets an explicit w-[min(100%,…)] — do not force full bleed.
-          "relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full justify-center overflow-x-hidden overflow-y-auto overscroll-contain",
+          // Keep a 1px gutter so dialog ring/shadow isn't clipped by overflow.
+          "relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full justify-center overflow-x-hidden overflow-y-auto overscroll-contain p-px",
         )}
       >
         {children}

@@ -73,28 +73,36 @@ export function BlocksFoundCard({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[120px]">Height</TableHead>
+                    <TableHead className="w-[100px]">Height</TableHead>
                     <TableHead>Address</TableHead>
-                    <TableHead className="w-[160px]">Worker</TableHead>
+                    <TableHead className="w-[140px]">Worker</TableHead>
+                    <TableHead className="w-[120px]">Type</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {blocks.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="h-20 text-center text-muted-foreground">
+                      <TableCell colSpan={4} className="h-20 text-center text-muted-foreground">
                         No blocks found yet.
                       </TableCell>
                     </TableRow>
                   ) : (
                     blocks.map((block) => (
-                      <TableRow key={`${block.height}-${block.worker}-${block.address}`}>
+                      <TableRow
+                        key={`${block.height}-${block.worker}-${block.address}-${block.device ?? ""}`}
+                      >
                         <TableCell className="tabular-nums">
                           {block.height.toLocaleString()}
                         </TableCell>
-                        <TableCell className="max-w-[280px] truncate font-mono text-xs">
+                        <TableCell className="max-w-[220px] truncate font-mono text-xs">
                           {block.address || "n/a"}
                         </TableCell>
-                        <TableCell>{block.worker || "n/a"}</TableCell>
+                        <TableCell className="max-w-[140px] truncate">
+                          {block.worker || "n/a"}
+                        </TableCell>
+                        <TableCell className="max-w-[120px] truncate text-muted-foreground">
+                          {block.device || "—"}
+                        </TableCell>
                       </TableRow>
                     ))
                   )}

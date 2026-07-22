@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { SettingsPage } from "@/components/settings-page";
 import type { PoolLifetimeStats } from "@/components/settings-info";
@@ -7,6 +8,8 @@ import { mockLifetimeUptimeSeconds, mockSessionUptimeSeconds } from "@/lib/mock-
 import { configuredStratumUrl, getDashboard } from "@/lib/pool";
 
 const isPublicSite =
+  process.env.NEXT_PUBLIC_LIDO_PUBLIC === "true" ||
+  process.env.LIDO_PUBLIC === "true" ||
   process.env.GITHUB_PAGES === "true" ||
   process.env.NEXT_PUBLIC_LIDO_DEMO === "true" ||
   process.env.LIDO_USE_MOCK === "true";
@@ -24,6 +27,10 @@ export const metadata: Metadata = isPublicSite
 
 export default async function SettingsRoute() {
   const deployment = deploymentKind();
+  if (deployment === "public") {
+    redirect("/");
+  }
+
   const stratumConfigured = configuredStratumUrl();
 
   let network = null;

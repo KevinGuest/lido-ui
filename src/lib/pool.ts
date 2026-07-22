@@ -1,6 +1,7 @@
 import { unstable_noStore as noStore } from "next/cache";
 
 import { applyLiveChainSnapshot, fetchLiveChainSnapshot } from "@/lib/live-chain";
+import { deviceLabel } from "@/lib/device-label";
 import { buildMockDashboard, type ChartPoint, type DashboardPayload, type DifficultyAdjustment, type FoundBlock, type MinerChartSeries, type NetworkInfo, type Worker } from "@/lib/mock-data";
 import { discoverMinerHosts } from "@/lib/network-scan";
 import { configuredStratumUrl as configuredStratumUrlPublic } from "@/lib/pool-public";
@@ -607,11 +608,23 @@ export async function getDashboard(): Promise<DashboardPayload> {
 
   const foundBlocks: FoundBlock[] = Array.isArray(pool.blocksFound)
     ? pool.blocksFound
-        .map((block) => ({
-          height: Number(block.height) || 0,
-          address: block.minerAddress || "",
-          worker: block.worker || "",
-        }))
+        .map((block) => {
+          const workerName = block.worker || "";
+          const address = block.minerAddress || "";
+          const match =
+            workers.find(
+              (worker) =>
+                worker.name === workerName &&
+                (!address ||
+                  worker.address.trim().toLowerCase() === address.trim().toLowerCase()),
+            ) ?? workers.find((worker) => worker.name === workerName);
+          return {
+            height: Number(block.height) || 0,
+            address,
+            worker: workerName,
+            device: match ? deviceLabel(match.userAgent) : undefined,
+          };
+        })
         .filter((block) => block.height > 0)
         .sort((a, b) => b.height - a.height)
     : [];

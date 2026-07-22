@@ -967,12 +967,21 @@ export function HashrateChart({
   workers,
   chartSince,
   liveHashrate = 0,
+  mode = "full",
+  autoSelectMinerIds,
+  initialPage,
 }: {
   data: ChartPoint[];
   minerCharts?: MinerChartSeries[];
   workers?: ChartWorkerRef[];
   chartSince: string;
   liveHashrate?: number;
+  /** Public pool: total + weekly only (no per-miner page). */
+  mode?: "full" | "public";
+  /** When set (e.g. Find your miners), pre-select these series on the miner chart. */
+  autoSelectMinerIds?: string[];
+  /** Jump to a chart page when the view mode changes (e.g. address find). */
+  initialPage?: "total" | "week" | "miners";
 }) {
   const [pageIndex, setPageIndex] = React.useState(0);
   const [liveMode, setLiveMode] = React.useState(true);
@@ -983,6 +992,31 @@ export function HashrateChart({
     from: startOfLocalDay(new Date(chartSince)),
     to: endOfLocalDay(new Date()),
   }));
+
+  const pages =
+    mode === "public"
+      ? ([
+          { key: "total", title: "Total hashrate" },
+          { key: "week", title: "Weekly compare" },
+        ] as const)
+      : ([
+          { key: "total", title: "Total hashrate" },
+          { key: "week", title: "Weekly compare" },
+          { key: "miners", title: "Miner hashrate" },
+        ] as const);
+
+  const autoSelectKey = autoSelectMinerIds?.join("\0") ?? "";
+
+  React.useEffect(() => {
+    if (!autoSelectMinerIds?.length) return;
+    setSelectedMinerIds(new Set(autoSelectMinerIds));
+  }, [autoSelectKey, autoSelectMinerIds]);
+
+  React.useEffect(() => {
+    if (!initialPage) return;
+    const index = pages.findIndex((page) => page.key === initialPage);
+    if (index >= 0) setPageIndex(index);
+  }, [initialPage, mode]);
 
   const liveDayWindow = React.useMemo(() => {
     const to = new Date();
@@ -999,12 +1033,6 @@ export function HashrateChart({
     const to = endOfLocalDay(dateRange.to ?? dateRange.from).toISOString();
     return clampWindow({ from, to }, chartSince);
   }, [dateRange, chartSince, liveDayWindow]);
-
-  const pages = [
-    { key: "total", title: "Total hashrate" },
-    { key: "week", title: "Weekly compare" },
-    { key: "miners", title: "Miner hashrate" },
-  ] as const;
 
   const page = pages[Math.min(pageIndex, pages.length - 1)];
 

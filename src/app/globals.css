@@ -169,10 +169,10 @@
   }
 }
 
-/* Marquee dialog shells: no hard outline ringing the banner strips in light mode.
-   min-w-0 keeps long marquee tracks from expanding past each dialog's max-width. */
+/* Dialog shells: soft edge that follows rounded corners (border stays inside the box,
+   so overflow on the modal scroller can't clip it the way ring/box-shadow can). */
 .lido-dialog-shell {
-  @apply min-w-0 border-0 shadow-xl ring-1 ring-black/5 dark:ring-white/10;
+  @apply min-w-0 border border-border shadow-xl;
 }
 
 /* Modal open: blur the app root (more reliable than backdrop-filter alone). */

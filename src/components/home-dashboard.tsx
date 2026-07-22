@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 import { AppHeader } from "@/components/app-header";
 import { AutoRefresh } from "@/components/auto-refresh";
@@ -9,6 +10,7 @@ import { BootLogo } from "@/components/boot-logo";
 import { DifficultyAdjustmentBar } from "@/components/difficulty-adjustment-bar";
 import { HalvingCountdown } from "@/components/halving-countdown";
 import { HashrateChart } from "@/components/hashrate-chart";
+import { PublicDeviceTable } from "@/components/public-device-table";
 import { UpdateNotifier } from "@/components/update-notifier";
 import { WorkersTable } from "@/components/workers-table";
 import {
@@ -18,13 +20,87 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useUpdateAvailability } from "@/hooks/use-update-availability";
+import { useAddressSession } from "@/lib/address-session";
+import { addressHasPoolWorkers } from "@/lib/address-auth";
 import type { DeploymentKind } from "@/lib/app-meta";
+import { shortenAddress } from "@/lib/bitcoin-address";
 import { formatUptime, hashSuffix, numberSuffix } from "@/lib/format";
 import { applyLiveChainSnapshot, fetchLiveChainSnapshot } from "@/lib/live-chain";
-import type { DashboardPayload } from "@/lib/mock-data";
+import type { ChartPoint, DashboardPayload, MinerChartSeries, Worker } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 const CHAIN_POLL_MS = 60_000;
+/** Cap miner series in Find-your-miners chart so stress mocks stay usable. */
+const PERSONAL_CHART_LIMIT = 40;
+/** Hold the find-miners bridge before revealing the personal dashboard. */
+const AUTH_BRIDGE_MS = 1100;
+
+function personalMinerChartSeries(
+  workers: Worker[],
+  minerCharts: MinerChartSeries[],
+  totalChart: ChartPoint[],
+): MinerChartSeries[] {
+  const chartById = new Map(minerCharts.map((series) => [series.id, series]));
+  const chartByName = new Map(
+    minerCharts.map((series) => [series.name.trim().toLowerCase(), series]),
+  );
+  const timebase =
+    minerCharts.find((series) => series.chart.length > 0)?.chart ?? totalChart;
+
+  const ranked = [...workers]
+    .sort((a, b) => {
+      const aOnline = a.online !== false;
+      const bOnline = b.online !== false;
+      if (aOnline !== bOnline) return aOnline ? -1 : 1;
+      return b.hashrate - a.hashrate || a.name.localeCompare(b.name);
+    })
+    .slice(0, PERSONAL_CHART_LIMIT);
+
+  return ranked.map((worker) => {
+    const exact =
+      chartById.get(worker.id) ??
+      chartByName.get(worker.name.trim().toLowerCase());
+    if (exact) {
+      return { id: worker.id, name: worker.name, chart: exact.chart };
+    }
+
+    const baseName = worker.name.replace(/-\d+$/, "").trim().toLowerCase();
+    const byBase = baseName ? chartByName.get(baseName) : undefined;
+    if (byBase) {
+      return { id: worker.id, name: worker.name, chart: byBase.chart };
+    }
+
+    const hashrate = worker.online === false ? 0 : worker.hashrate || 0;
+    return {
+      id: worker.id,
+      name: worker.name,
+      chart: timebase.map((point, index) => ({
+        label: point.label,
+        data:
+          worker.online === false
+            ? 0
+            : index === timebase.length - 1
+              ? hashrate
+              : hashrate * (0.88 + ((index + worker.name.length) % 9) * 0.015),
+      })),
+    };
+  });
+}
+
+/** Sum per-miner series into one total/weekly chart for an address view. */
+function sumMinerCharts(series: MinerChartSeries[]): ChartPoint[] {
+  if (series.length === 0) return [];
+  const labels =
+    series.find((entry) => entry.chart.length > 0)?.chart.map((point) => point.label) ??
+    [];
+  return labels.map((label, index) => ({
+    label,
+    data: series.reduce(
+      (sum, entry) => sum + (Number(entry.chart[index]?.data) || 0),
+      0,
+    ),
+  }));
+}
 /** Hold the splash long enough for the spin, then crossfade. */
 const BOOT_MS = 1100;
 const FADE_MS = 450;
@@ -94,7 +170,16 @@ export function HomeDashboard({
   const [splashMounted, setSplashMounted] = useState(true);
   const [splashOpaque, setSplashOpaque] = useState(true);
   const liveChain = initial.source === "mock";
-  const update = useUpdateAvailability(deployment, { announce: !splashOpaque });
+  const publicMode = deployment === "public";
+  const session = useAddressSession();
+  const [authBridge, setAuthBridge] = useState<{
+    address: string;
+    minerCount: number;
+    opaque: boolean;
+  } | null>(null);
+  const update = useUpdateAvailability(deployment, {
+    announce: !splashOpaque && !publicMode && !authBridge,
+  });
 
   useEffect(() => {
     setDashboard(initial);
@@ -205,6 +290,136 @@ export function HomeDashboard({
     sv2AuthorityPublicKey,
   } = dashboard;
 
+  const loggedInAddress = publicMode ? session.address : null;
+  const personalWorkers =
+    loggedInAddress == null
+      ? workers
+      : workers.filter(
+          (worker) =>
+            worker.address.trim().toLowerCase() ===
+            loggedInAddress.trim().toLowerCase(),
+        );
+
+  const handleAddressLogin = useCallback(
+    (address: string) => {
+      const trimmed = address.trim();
+      const needle = trimmed.toLowerCase();
+      const minerCount = workers.filter(
+        (worker) => worker.address.trim().toLowerCase() === needle,
+      ).length;
+
+      let reduceMotion = false;
+      try {
+        reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      } catch {
+        reduceMotion = false;
+      }
+
+      if (reduceMotion) {
+        session.login(trimmed);
+        return;
+      }
+
+      window.scrollTo(0, 0);
+      setAuthBridge({ address: trimmed, minerCount, opaque: true });
+    },
+    [session.login, workers],
+  );
+
+  useEffect(() => {
+    if (!authBridge?.opaque) return;
+    const address = authBridge.address;
+
+    const holdId = window.setTimeout(() => {
+      session.login(address);
+      setAuthBridge((current) =>
+        current ? { ...current, opaque: false } : null,
+      );
+    }, AUTH_BRIDGE_MS);
+
+    return () => window.clearTimeout(holdId);
+  }, [authBridge?.opaque, authBridge?.address, session.login]);
+
+  useEffect(() => {
+    if (!authBridge || authBridge.opaque) return;
+    const fadeId = window.setTimeout(() => setAuthBridge(null), FADE_MS);
+    return () => window.clearTimeout(fadeId);
+  }, [authBridge]);
+
+  // Drop stored sessions that no longer have a miner on the pool.
+  useEffect(() => {
+    if (!publicMode || !session.ready || !session.address) return;
+    if (!addressHasPoolWorkers(session.address, workers)) {
+      session.logout();
+    }
+  }, [publicMode, session.ready, session.address, session.logout, workers]);
+
+  const personalMinerCharts = useMemo(() => {
+    if (!publicMode || !loggedInAddress) return minerCharts;
+    return personalMinerChartSeries(personalWorkers, minerCharts, chart);
+  }, [publicMode, loggedInAddress, personalWorkers, minerCharts, chart]);
+
+  const personalTotalChart = useMemo(() => {
+    if (!publicMode || !loggedInAddress) return chart;
+    const summed = sumMinerCharts(personalMinerCharts);
+    return summed.length > 0 ? summed : chart;
+  }, [publicMode, loggedInAddress, personalMinerCharts, chart]);
+
+  const personalLiveHashrate = useMemo(
+    () =>
+      personalWorkers
+        .filter((worker) => worker.online !== false)
+        .reduce((sum, worker) => sum + worker.hashrate, 0),
+    [personalWorkers],
+  );
+
+  const personalBestDifficulty = useMemo(
+    () =>
+      personalWorkers.reduce(
+        (max, worker) => Math.max(max, worker.bestDifficulty || 0),
+        0,
+      ),
+    [personalWorkers],
+  );
+
+  const personalFoundBlocks = useMemo(() => {
+    if (!loggedInAddress) return foundBlocks;
+    const needle = loggedInAddress.trim().toLowerCase();
+    return foundBlocks.filter(
+      (block) => block.address.trim().toLowerCase() === needle,
+    );
+  }, [foundBlocks, loggedInAddress]);
+
+  const personalBlocksFoundCount = useMemo(() => {
+    if (!loggedInAddress) return pool.blocksFound;
+    if (personalFoundBlocks.length > 0) return personalFoundBlocks.length;
+    return personalWorkers.reduce((sum, worker) => sum + (worker.blocksFound || 0), 0);
+  }, [
+    loggedInAddress,
+    personalFoundBlocks.length,
+    personalWorkers,
+    pool.blocksFound,
+  ]);
+
+  const viewingPersonal = Boolean(publicMode && loggedInAddress);
+  const displayHashrate = viewingPersonal ? personalLiveHashrate : pool.totalHashRate;
+  const displayBestDifficulty = viewingPersonal
+    ? personalBestDifficulty
+    : pool.bestDifficulty;
+  const displayFoundBlocks = viewingPersonal ? personalFoundBlocks : foundBlocks;
+  const displayBlocksFound = viewingPersonal
+    ? personalBlocksFoundCount
+    : pool.blocksFound;
+
+  const showMinerHashrateChart = !publicMode || Boolean(loggedInAddress);
+  const autoSelectMinerIds = useMemo(
+    () =>
+      publicMode && loggedInAddress
+        ? personalMinerCharts.map((series) => series.id)
+        : undefined,
+    [publicMode, loggedInAddress, personalMinerCharts],
+  );
+
   const showApp = !splashOpaque;
 
   return (
@@ -225,30 +440,72 @@ export function HomeDashboard({
         </div>
       ) : null}
 
+      {authBridge ? (
+        <div
+          className={cn(
+            "fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background px-6",
+            "transition-opacity duration-[450ms] ease-out",
+            authBridge.opaque ? "opacity-100" : "opacity-0 pointer-events-none",
+          )}
+          role="status"
+          aria-live="polite"
+          aria-label="Loading your miners"
+          aria-hidden={!authBridge.opaque}
+        >
+          <BootLogo subtitle="Finding your miners" />
+          <div className="space-y-1 text-center">
+            <p className="font-mono text-sm text-muted-foreground">
+              {shortenAddress(authBridge.address)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {authBridge.minerCount === 1
+                ? "1 miner on this pool"
+                : `${authBridge.minerCount.toLocaleString()} miners on this pool`}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       <div
         className={cn(
           "mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6",
           "transition-opacity duration-[450ms] ease-out",
-          showApp ? "opacity-100" : "opacity-0",
+          showApp && !authBridge?.opaque ? "opacity-100" : "opacity-0",
         )}
-        aria-hidden={!showApp}
+        aria-hidden={!showApp || Boolean(authBridge?.opaque)}
       >
         {showApp ? <AutoRefresh seconds={60} /> : null}
-        <UpdateNotifier
-          dialogOpen={update.dialogOpen}
-          onCloseDialog={update.closeDialog}
-          release={update.release}
-          currentVersion={update.currentVersion}
-          deployment={deployment}
-        />
+        {!publicMode ? (
+          <UpdateNotifier
+            dialogOpen={update.dialogOpen}
+            onCloseDialog={update.closeDialog}
+            release={update.release}
+            currentVersion={update.currentVersion}
+            deployment={deployment}
+          />
+        ) : null}
         <AppHeader
           network={network}
           stratumConfigured={stratumConfigured}
           sv2AuthorityPublicKey={sv2AuthorityPublicKey}
-          showUpdate={update.hasUpdate}
-          highlightUpdate={update.hintOpen}
-          onUpdateClick={update.openDialog}
+          showUpdate={!publicMode && update.hasUpdate}
+          highlightUpdate={!publicMode && update.hintOpen}
+          onUpdateClick={publicMode ? undefined : update.openDialog}
+          deployment={deployment}
+          loggedInAddress={loggedInAddress}
+          onLogin={publicMode ? handleAddressLogin : undefined}
+          onLogout={publicMode ? session.logout : undefined}
+          loginWorkers={publicMode ? workers : undefined}
         />
+
+        {publicMode && loggedInAddress ? (
+          <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm">
+            <p>
+              Viewing miners for{" "}
+              <span className="font-mono font-medium">{shortenAddress(loggedInAddress)}</span>
+            </p>
+          </div>
+        ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <Card>
@@ -263,7 +520,7 @@ export function HomeDashboard({
             <CardHeader className="pb-2">
               <CardDescription>Total hashrate</CardDescription>
               <CardTitle className="text-2xl tabular-nums">
-                {hashSuffix(pool.totalHashRate)}
+                {hashSuffix(displayHashrate)}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -271,7 +528,7 @@ export function HomeDashboard({
             <CardHeader className="pb-2">
               <CardDescription>Best difficulty</CardDescription>
               <CardTitle className="text-2xl tabular-nums">
-                {pool.bestDifficulty ? numberSuffix(pool.bestDifficulty) : "—"}
+                {displayBestDifficulty ? numberSuffix(displayBestDifficulty) : "—"}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -283,7 +540,7 @@ export function HomeDashboard({
               </CardTitle>
             </CardHeader>
           </Card>
-          <BlocksFoundCard count={pool.blocksFound} blocks={foundBlocks} />
+          <BlocksFoundCard count={displayBlocksFound} blocks={displayFoundBlocks} />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
@@ -298,32 +555,52 @@ export function HomeDashboard({
         </div>
 
         <HashrateChart
-          data={chart}
-          minerCharts={minerCharts}
-          workers={workers}
+          data={viewingPersonal ? personalTotalChart : chart}
+          minerCharts={showMinerHashrateChart ? personalMinerCharts : []}
+          workers={showMinerHashrateChart ? personalWorkers : undefined}
           chartSince={chartSince}
-          liveHashrate={pool.totalHashRate}
+          liveHashrate={
+            viewingPersonal ? personalLiveHashrate : pool.totalHashRate
+          }
+          mode={showMinerHashrateChart ? "full" : "public"}
+          autoSelectMinerIds={autoSelectMinerIds}
+          initialPage={viewingPersonal ? "miners" : undefined}
         />
 
-        <WorkersTable
-          workers={workers}
-          totalMiners={pool.totalMiners}
-          persistRemovals={dashboard.source !== "mock"}
-        />
+        {publicMode && !loggedInAddress ? (
+          <PublicDeviceTable workers={workers} />
+        ) : (
+          <WorkersTable
+            workers={publicMode ? personalWorkers : workers}
+            totalMiners={
+              publicMode ? personalWorkers.length : pool.totalMiners
+            }
+            persistRemovals={!publicMode && dashboard.source !== "mock"}
+            allowRemove={!publicMode}
+          />
+        )}
 
-        <p className="text-center text-sm text-muted-foreground">
-          <span className="text-black dark:text-white">Lido</span> is a fully
-          open-source solo Bitcoin mining pool — a fork of{" "}
-          <a
-            href="https://web.public-pool.io"
-            target="_blank"
-            rel="noreferrer"
-            className="text-black transition-opacity hover:opacity-80 dark:text-white"
+        <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+          <p className="min-w-0 text-left">
+            <span className="text-black dark:text-white">Lido</span> is a fully
+            open-source solo Bitcoin mining pool — a fork of{" "}
+            <a
+              href="https://web.public-pool.io"
+              target="_blank"
+              rel="noreferrer"
+              className="text-black transition-opacity hover:opacity-80 dark:text-white"
+            >
+              Public Pool
+            </a>
+            .
+          </p>
+          <Link
+            href="/terms"
+            className="shrink-0 text-left underline underline-offset-4 transition-opacity hover:text-foreground sm:text-right"
           >
-            Public Pool
-          </a>
-          .
-        </p>
+            Terms of Service
+          </Link>
+        </div>
       </div>
     </div>
   );

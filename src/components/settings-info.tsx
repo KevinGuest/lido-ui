@@ -7,9 +7,9 @@ import type { DeploymentKind } from "@/lib/app-meta";
 import { formatUptime, numberSuffix } from "@/lib/format";
 import { mockLifetimeUptimeSeconds, mockSessionUptimeSeconds } from "@/lib/mock-data";
 import {
-  STRATUM_V1_PORT,
-  STRATUM_V2_PORT,
   resolveStratumEndpoint,
+  stratumV1Port,
+  stratumV2Port,
   withStratumPort,
 } from "@/lib/stratum-url";
 import { cn, copyToClipboard, hoverLabelClassName } from "@/lib/utils";
@@ -211,11 +211,11 @@ export function SettingsInfoPanel({
   }, [stratumConfigured]);
 
   const sv1Url = hostEndpoint
-    ? withStratumPort(hostEndpoint, STRATUM_V1_PORT)
-    : `…:${STRATUM_V1_PORT}`;
+    ? withStratumPort(hostEndpoint, stratumV1Port())
+    : `…:${stratumV1Port()}`;
   const sv2Url = hostEndpoint
-    ? withStratumPort(hostEndpoint, STRATUM_V2_PORT)
-    : `…:${STRATUM_V2_PORT}`;
+    ? withStratumPort(hostEndpoint, stratumV2Port())
+    : `…:${stratumV2Port()}`;
 
   const authority =
     sv2AuthorityPublicKey?.trim() ||
@@ -390,7 +390,7 @@ export function SettingsInfoPanel({
       {pane === "sv1" ? (
         <section className="rounded-xl border border-border/40 px-3 dark:border-border/50">
           <InfoRow label="Endpoint" value={sv1Url} mono />
-          <InfoRow label="Port" value={String(STRATUM_V1_PORT)} mono />
+          <InfoRow label="Port" value={String(stratumV1Port())} mono />
           <InfoRow label="Password" value="x" mono />
         </section>
       ) : null}
@@ -398,7 +398,7 @@ export function SettingsInfoPanel({
       {pane === "sv2" ? (
         <section className="rounded-xl border border-border/40 px-3 dark:border-border/50">
           <InfoRow label="Endpoint" value={sv2Url} mono />
-          <InfoRow label="Port" value={String(STRATUM_V2_PORT)} mono />
+          <InfoRow label="Port" value={String(stratumV2Port())} mono />
           <InfoRow label="Password" value="x" mono />
           <InfoRow
             label="Authority public key"
