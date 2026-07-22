@@ -16,7 +16,10 @@ const IS_DEV = process.env.NODE_ENV === "development";
 
 export function useUpdateAvailability(
   deployment: DeploymentKind,
-  { announce = true }: { announce?: boolean } = {},
+  {
+    announce = true,
+    currentVersion = APP_VERSION,
+  }: { announce?: boolean; currentVersion?: string } = {},
 ) {
   const [release, setRelease] = useState<LatestRelease | null>(null);
   const [isNewer, setIsNewer] = useState(false);
@@ -25,18 +28,18 @@ export function useUpdateAvailability(
   const [hintOpen, setHintOpen] = useState(false);
 
   useEffect(() => {
-    // Demo (GitHub Pages / mock) is always shipped as latest — no update affordance.
-    if (deployment === "demo") return;
+    // Demo / public: no update affordance.
+    if (deployment === "demo" || deployment === "public") return;
 
     let cancelled = false;
 
     (async () => {
-      const latest = await fetchLatestRelease();
+      const latest = await fetchLatestRelease(deployment);
       if (cancelled || !latest) return;
 
-      const newer = isNewerVersion(latest.tag, APP_VERSION);
+      const newer = isNewerVersion(latest.tag, currentVersion);
       // Local next/dev: preview update UI even when already current.
-      // Production: only when GitHub is ahead.
+      // Production: only when the tracked repo is ahead.
       if (!newer && !IS_DEV) return;
 
       // Skip if this real upgrade was permanently dismissed.
@@ -49,10 +52,13 @@ export function useUpdateAvailability(
     return () => {
       cancelled = true;
     };
-  }, [deployment]);
+  }, [deployment, currentVersion]);
 
   const hasUpdate =
-    deployment !== "demo" && Boolean(release) && (isNewer || IS_DEV);
+    deployment !== "demo" &&
+    deployment !== "public" &&
+    Boolean(release) &&
+    (isNewer || IS_DEV);
 
   useEffect(() => {
     if (!announce || !hasUpdate) return;
@@ -86,7 +92,7 @@ export function useUpdateAvailability(
     openDialog,
     closeDialog,
     dismissUpdate,
-    currentVersion: APP_VERSION,
+    currentVersion,
     hasUpdate,
   };
 }

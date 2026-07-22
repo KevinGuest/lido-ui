@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { SettingsPage } from "@/components/settings-page";
 import type { PoolLifetimeStats } from "@/components/settings-info";
-import { deploymentKind } from "@/lib/app-meta";
+import { deploymentKind, installedAppVersion } from "@/lib/app-meta";
 import { mockLifetimeUptimeSeconds, mockSessionUptimeSeconds } from "@/lib/mock-data";
 import { configuredStratumUrl, getDashboard } from "@/lib/pool";
 
@@ -63,6 +63,7 @@ export default async function SettingsRoute() {
       initialNetwork={network}
       sv2AuthorityPublicKey={sv2AuthorityPublicKey}
       lifetime={lifetime}
+      appVersion={installedAppVersion(deployment)}
     />
   );
 }

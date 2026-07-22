@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { DeploymentKind } from "@/lib/app-meta";
-import { GITHUB_RELEASES_URL } from "@/lib/app-meta";
+import { GITHUB_RELEASES_URL, UMBREL_APP_URL } from "@/lib/app-meta";
 import { resolveUmbrelAppStoreUrl } from "@/lib/stratum-url";
 import type { LatestRelease } from "@/lib/update-check";
 import { cn } from "@/lib/utils";
@@ -31,12 +31,12 @@ export function UpdateDialog({
   onClose,
   currentVersion,
   release,
+  deployment,
 }: {
   open: boolean;
   onClose: () => void;
   currentVersion: string;
   release: LatestRelease;
-  /** Kept for callers; actions always offer Umbrel + GitHub. */
   deployment?: DeploymentKind;
 }) {
   const [umbrelAppStoreUrl, setUmbrelAppStoreUrl] = useState(
@@ -52,7 +52,9 @@ export function UpdateDialog({
     );
   }, []);
 
-  const githubUrl = release.url || GITHUB_RELEASES_URL;
+  const githubUrl =
+    release.url ||
+    (deployment === "umbrel" ? UMBREL_APP_URL : GITHUB_RELEASES_URL);
   const current = formatVersion(currentVersion);
   const latest = formatVersion(release.tag);
 

@@ -30,6 +30,19 @@ export function isPublicDeployment(kind: DeploymentKind = deploymentKind()): boo
   return kind === "public";
 }
 
+/**
+ * Version used for update checks.
+ * Umbrel: runtime `LIDO_APP_VERSION` from compose (app-store package), not the UI image tag.
+ * Others: baked UI `NEXT_PUBLIC_LIDO_VERSION`.
+ */
+export function installedAppVersion(kind: DeploymentKind = deploymentKind()): string {
+  if (kind === "umbrel") {
+    const app = (process.env.LIDO_APP_VERSION ?? "").trim();
+    if (app) return app;
+  }
+  return APP_VERSION;
+}
+
 export function updateDestinationUrl(kind: DeploymentKind): string {
   return kind === "umbrel" ? UMBREL_APP_URL : GITHUB_RELEASES_URL;
 }

@@ -1,11 +1,18 @@
+import type { DeploymentKind } from "@/lib/app-meta";
+import { UMBREL_APP_URL } from "@/lib/app-meta";
+
 export type LatestRelease = {
   tag: string;
   name: string;
   url: string;
 };
 
-const RELEASES_API_URL =
+const UI_RELEASES_API_URL =
   "https://api.github.com/repos/KevinGuest/lido-ui/releases/latest";
+
+/** Community Umbrel package manifest — source of truth for Umbrel app version. */
+const UMBREL_APP_MANIFEST_URL =
+  "https://raw.githubusercontent.com/KevinGuest/lido-app/main/lido-app/umbrel-app.yml";
 
 const DISMISS_KEY = "lido-update-dismissed";
 
@@ -46,9 +53,34 @@ export function dismissUpdateTag(tag: string) {
   }
 }
 
-export async function fetchLatestRelease(): Promise<LatestRelease | null> {
+function parseUmbrelManifestVersion(yaml: string): string | null {
+  const match = yaml.match(/^\s*version:\s*["']?([^"'\s#]+)/m);
+  const tag = match?.[1]?.trim();
+  return tag || null;
+}
+
+async function fetchLatestUmbrelAppRelease(): Promise<LatestRelease | null> {
   try {
-    const response = await fetch(RELEASES_API_URL, {
+    const response = await fetch(UMBREL_APP_MANIFEST_URL, {
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const yaml = await response.text();
+    const tag = parseUmbrelManifestVersion(yaml);
+    if (!tag) return null;
+    return {
+      tag,
+      name: `Lido ${tag}`,
+      url: UMBREL_APP_URL,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchLatestUiRelease(): Promise<LatestRelease | null> {
+  try {
+    const response = await fetch(UI_RELEASES_API_URL, {
       headers: { Accept: "application/vnd.github+json" },
       cache: "no-store",
     });
@@ -70,4 +102,12 @@ export async function fetchLatestRelease(): Promise<LatestRelease | null> {
   } catch {
     return null;
   }
+}
+
+/** Umbrel tracks lido-app; self-hosted tracks lido-ui releases. */
+export async function fetchLatestRelease(
+  deployment: DeploymentKind = "self-hosted",
+): Promise<LatestRelease | null> {
+  if (deployment === "umbrel") return fetchLatestUmbrelAppRelease();
+  return fetchLatestUiRelease();
 }

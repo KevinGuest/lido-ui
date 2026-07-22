@@ -23,7 +23,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { useUpdateAvailability } from "@/hooks/use-update-availability";
 import { useAddressSession } from "@/lib/address-session";
 import { addressHasPoolWorkers } from "@/lib/address-auth";
-import type { DeploymentKind } from "@/lib/app-meta";
+import { PUBLIC_POOL_GITHUB_URL, type DeploymentKind } from "@/lib/app-meta";
 import { shortenAddress } from "@/lib/bitcoin-address";
 import { formatUptime, hashSuffix, numberSuffix } from "@/lib/format";
 import { applyLiveChainSnapshot, fetchLiveChainSnapshot } from "@/lib/live-chain";
@@ -160,10 +160,13 @@ export function HomeDashboard({
   initial,
   deployment,
   stratumConfigured = "",
+  appVersion,
 }: {
   initial: DashboardPayload;
   deployment: DeploymentKind;
   stratumConfigured?: string;
+  /** Installed app version for update checks (Umbrel package vs UI image). */
+  appVersion?: string;
 }) {
   const [dashboard, setDashboard] = useState(initial);
   // Always start as splash on SSR + first client paint so hydration matches.
@@ -180,6 +183,7 @@ export function HomeDashboard({
   } | null>(null);
   const update = useUpdateAvailability(deployment, {
     announce: !splashOpaque && !publicMode && !authBridge,
+    currentVersion: appVersion,
   });
 
   useEffect(() => {
@@ -588,14 +592,14 @@ export function HomeDashboard({
             <span className="text-black dark:text-white">Lido</span> is a fully
             open-source solo Bitcoin mining pool — a fork of{" "}
             <a
-              href="https://web.public-pool.io"
+              href={PUBLIC_POOL_GITHUB_URL}
               target="_blank"
               rel="noreferrer"
               className="text-black transition-opacity hover:opacity-80 dark:text-white"
             >
               Public Pool
             </a>
-            .
+            . Credit to Benjamin Wilson and contributors.
           </p>
           <Link
             href="/terms"

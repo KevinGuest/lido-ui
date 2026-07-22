@@ -44,16 +44,18 @@ export function SettingsPage({
   initialNetwork,
   sv2AuthorityPublicKey = null,
   lifetime = null,
+  appVersion,
 }: {
   deployment: DeploymentKind;
   stratumConfigured?: string;
   initialNetwork?: NetworkInfo | null;
   sv2AuthorityPublicKey?: string | null;
   lifetime?: PoolLifetimeStats | null;
+  appVersion?: string;
 }) {
   const [tab, setTab] = useState<SettingsTab>("info");
   const [network, setNetwork] = useState<NetworkInfo>(initialNetwork ?? EMPTY_NETWORK);
-  const update = useUpdateAvailability(deployment);
+  const update = useUpdateAvailability(deployment, { currentVersion: appVersion });
 
   useEffect(() => {
     if (initialNetwork) setNetwork(initialNetwork);
