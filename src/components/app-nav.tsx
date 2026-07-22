@@ -364,7 +364,7 @@ export function AppNav({
             onClose={() => setConnectOpen(false)}
             stratumUrl={stratumUrl}
             initialAuthorityPublicKey={sv2AuthorityPublicKey}
-            allowAuthorityRotate={!publicMode}
+            allowAuthorityRotate={deployment === "self-hosted"}
           />
           <DonateDialog open={donateOpen} onClose={() => setDonateOpen(false)} />
           {publicMode && onLogin ? (

@@ -149,7 +149,7 @@ export function ConnectDialog({
   stratumUrl: string;
   usernameHint?: string;
   initialAuthorityPublicKey?: string | null;
-  /** False on public hosted pools — rotation would brick every shared SV2 miner. */
+  /** False on Umbrel + public hosted — rotation is self-hosted only. */
   allowAuthorityRotate?: boolean;
 }) {
   const [protocol, setProtocol] = useState<StratumProtocol>("sv1");
