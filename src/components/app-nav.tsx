@@ -126,7 +126,7 @@ export function AppNav({
   return (
     <>
       <nav className="flex items-center gap-2" aria-label="Primary">
-        <NetworkHeightPill network={network} />
+        <NetworkHeightPill network={network} deployment={deployment} />
 
         <div className="hidden items-center gap-2 md:flex">
           {settingsMode ? (

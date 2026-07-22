@@ -53,7 +53,7 @@ export function withStratumPort(endpoint: string, port: number): string {
 /**
  * Stratum URL for the Connect dialog — uses the host you opened the dashboard on
  * (IP, .local, Tailscale, etc.) unless an operator configured a distinct stratum host.
- * Public builds keep an explicit PUBLIC_POOL_STRATUM_URL (e.g. lido.wtf:3333).
+ * Public builds keep an explicit PUBLIC_POOL_STRATUM_URL (e.g. st.lido.wtf:3333).
  */
 export function resolveStratumEndpoint(
   browserHostname: string,

@@ -14,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { feeRateSats, hashSuffix, numberSuffix } from "@/lib/format";
+import type { DeploymentKind } from "@/lib/app-meta";
 import type { NetworkInfo } from "@/lib/mock-data";
 import { isNodeSyncing, syncProgressPct } from "@/lib/mock-data";
 import { cn, hoverLabelClassName } from "@/lib/utils";
@@ -27,10 +28,20 @@ function formatNetworkName(chain: string) {
   return chain || "Unknown";
 }
 
-export function NetworkHeightPill({ network }: { network: NetworkInfo }) {
+export function NetworkHeightPill({
+  network,
+  deployment = "self-hosted",
+}: {
+  network: NetworkInfo;
+  deployment?: DeploymentKind;
+}) {
   const [open, setOpen] = useState(false);
   const syncing = isNodeSyncing(network);
   const pct = syncProgressPct(network);
+  const publicMode = deployment === "public";
+  const description = publicMode
+    ? "Live mining info from the hosted pool’s bitcoin node via RPC."
+    : "Live mining info from your Umbrel Bitcoin node via the pool RPC link.";
 
   const rows = [
     { label: "Network", value: formatNetworkName(network.chain) },
@@ -124,9 +135,7 @@ export function NetworkHeightPill({ network }: { network: NetworkInfo }) {
           <Card className="border-0 shadow-none">
             <CardHeader className="px-6 pt-6">
               <CardTitle>Node network info</CardTitle>
-              <CardDescription>
-                Live mining info from your Umbrel Bitcoin node via the pool RPC link.
-              </CardDescription>
+              <CardDescription>{description}</CardDescription>
               <CardAction>
                 <Button
                   type="button"
