@@ -3,6 +3,8 @@
 Next.js dashboard for [Lido](https://github.com/KevinGuest/lido) — solo Bitcoin mining pool with Stratum V1 + V2, live workers, and Discord/Telegram alert settings.
 
 **Live demo:** https://lido.wtf/
+**Self Hosted Demo:** https://lido.wtf/
+
 
 Pool server: [`lido`](https://github.com/KevinGuest/lido) · Umbrel package: [`lido-app`](https://github.com/KevinGuest/lido-app)
 
