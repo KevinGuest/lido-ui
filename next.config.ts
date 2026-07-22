@@ -3,7 +3,11 @@ import type { NextConfig } from "next";
 import packageJson from "./package.json";
 
 const isPages = process.env.GITHUB_PAGES === "true";
-const isDemo = isPages || process.env.LIDO_USE_MOCK === "true";
+const isPublic =
+  process.env.NEXT_PUBLIC_LIDO_PUBLIC === "true" ||
+  process.env.LIDO_PUBLIC === "true";
+// Demo / Pages only — public edition never gets the demo flag.
+const isDemo = !isPublic && (isPages || process.env.LIDO_USE_MOCK === "true");
 
 const nextConfig: NextConfig = {
   env: {

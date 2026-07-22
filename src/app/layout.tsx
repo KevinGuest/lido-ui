@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 
 import { DemoSiteBanner } from "@/components/demo-site-banner";
+import { InlineScript } from "@/components/inline-script";
 import { ThemeInit } from "@/components/theme-init";
 import { ToastProvider } from "@/components/toast";
 import {
@@ -157,18 +157,17 @@ export default function RootLayout({
       // Default dark matches THEME_BOOT_SCRIPT / product default — avoids light→dark splash flash.
       className={cn("dark font-sans", geist.variable, geistMono.variable)}
     >
-      <body className="min-h-screen bg-background text-foreground antialiased">
+      <head>
+        {/* Pre-paint theme — SSR/hydration only (avoids React 19 client script warning). */}
+        <InlineScript html={THEME_BOOT_SCRIPT} />
         {isPublicSite ? (
-          <script
+          <InlineScript
             type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            html={JSON.stringify(jsonLd)}
           />
         ) : null}
-        <Script
-          id="lido-theme-boot"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }}
-        />
+      </head>
+      <body className="min-h-screen bg-background text-foreground antialiased">
         <ThemeInit />
         <ToastProvider offsetTopClassName={isDemoSite ? "top-14" : "top-4"}>
           <div id="lido-app">
