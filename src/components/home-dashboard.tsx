@@ -10,6 +10,7 @@ import { BootLogo } from "@/components/boot-logo";
 import { DifficultyAdjustmentBar } from "@/components/difficulty-adjustment-bar";
 import { HalvingCountdown } from "@/components/halving-countdown";
 import { HashrateChart } from "@/components/hashrate-chart";
+import { MetricValue } from "@/components/metric-value";
 import { PublicDeviceTable } from "@/components/public-device-table";
 import { UpdateNotifier } from "@/components/update-notifier";
 import { WorkersTable } from "@/components/workers-table";
@@ -181,6 +182,9 @@ export function HomeDashboard({
     minerCount: number;
     opaque: boolean;
   } | null>(null);
+  /** Demo/mock: chain enrich may lag SSR; pulse metrics until first live snapshot. */
+  const [chainReady, setChainReady] = useState(!liveChain);
+  const [clientMounted, setClientMounted] = useState(false);
   const update = useUpdateAvailability(deployment, {
     announce: !splashOpaque && !publicMode && !authBridge,
     currentVersion: appVersion,
@@ -189,6 +193,10 @@ export function HomeDashboard({
   useEffect(() => {
     setDashboard(initial);
   }, [initial]);
+
+  useEffect(() => {
+    setClientMounted(true);
+  }, []);
 
   useLayoutEffect(() => {
     if (!readBootSplashDone()) return;
@@ -269,8 +277,10 @@ export function HomeDashboard({
             })),
           };
         });
+        setChainReady(true);
       } catch {
-        // Keep last good chain snapshot.
+        // Keep last good chain snapshot; still leave loading if never succeeded.
+        setChainReady(true);
       }
     }
 
@@ -426,6 +436,7 @@ export function HomeDashboard({
   );
 
   const showApp = !splashOpaque;
+  const metricsLoading = clientMounted && liveChain && !chainReady;
 
   return (
     <div className="relative">
@@ -517,9 +528,14 @@ export function HomeDashboard({
             <CardHeader className="pb-2">
               <CardDescription>Uptime</CardDescription>
               <CardTitle className="text-2xl tabular-nums">
-                {uptimeSeconds == null || uptimeSeconds <= 0
-                  ? "—"
-                  : formatUptime(uptimeSeconds)}
+                <MetricValue
+                  loading={metricsLoading && uptimeSeconds == null}
+                  skeletonClassName="h-7 w-24"
+                >
+                  {uptimeSeconds == null || uptimeSeconds <= 0
+                    ? null
+                    : formatUptime(uptimeSeconds)}
+                </MetricValue>
               </CardTitle>
             </CardHeader>
           </Card>
@@ -527,7 +543,12 @@ export function HomeDashboard({
             <CardHeader className="pb-2">
               <CardDescription>Total hashrate</CardDescription>
               <CardTitle className="text-2xl tabular-nums">
-                {hashSuffix(displayHashrate)}
+                <MetricValue
+                  loading={metricsLoading}
+                  skeletonClassName="h-7 w-28"
+                >
+                  {hashSuffix(displayHashrate)}
+                </MetricValue>
               </CardTitle>
             </CardHeader>
           </Card>
@@ -535,7 +556,12 @@ export function HomeDashboard({
             <CardHeader className="pb-2">
               <CardDescription>Best difficulty</CardDescription>
               <CardTitle className="text-2xl tabular-nums">
-                {displayBestDifficulty ? numberSuffix(displayBestDifficulty) : "—"}
+                <MetricValue
+                  loading={metricsLoading && !displayBestDifficulty}
+                  skeletonClassName="h-7 w-24"
+                >
+                  {displayBestDifficulty ? numberSuffix(displayBestDifficulty) : null}
+                </MetricValue>
               </CardTitle>
             </CardHeader>
           </Card>
@@ -543,11 +569,20 @@ export function HomeDashboard({
             <CardHeader className="pb-2">
               <CardDescription>Network difficulty</CardDescription>
               <CardTitle className="text-2xl tabular-nums">
-                {network.difficulty ? numberSuffix(network.difficulty) : "—"}
+                <MetricValue
+                  loading={metricsLoading && !network.difficulty}
+                  skeletonClassName="h-7 w-28"
+                >
+                  {network.difficulty ? numberSuffix(network.difficulty) : null}
+                </MetricValue>
               </CardTitle>
             </CardHeader>
           </Card>
-          <BlocksFoundCard count={displayBlocksFound} blocks={displayFoundBlocks} />
+          <BlocksFoundCard
+            count={displayBlocksFound}
+            blocks={displayFoundBlocks}
+            loading={metricsLoading}
+          />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">

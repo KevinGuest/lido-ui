@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { FileText, History, Info, X } from "lucide-react";
 
 import { ModalOverlay } from "@/components/modal-overlay";
+import { MetricValue } from "@/components/metric-value";
 import { Card, CardContent } from "@/components/ui/card";
 import type { NetworkInfo } from "@/lib/mock-data";
 import { isNodeSyncing, syncProgressPct } from "@/lib/mock-data";
@@ -133,8 +134,10 @@ export function HalvingCountdown({
   const newSubsidy = INITIAL_SUBSIDY_BTC / 2 ** (epoch + 1);
   const blockMs = avgBlockMs > 0 ? avgBlockMs : TARGET_BLOCK_MS;
   const progress = Math.min(100, Math.max(0, (blocksIntoEpoch / HALVING_INTERVAL) * 100));
-  const etaLabel =
-    nowMs == null ? "—" : formatHalvingDate(nowMs + blocksRemaining * blockMs);
+  const etaReady = nowMs != null;
+  const etaLabel = etaReady
+    ? formatHalvingDate(nowMs + blocksRemaining * blockMs)
+    : null;
 
   function openModal(next: Pane = "about") {
     setPane(next);
@@ -183,7 +186,11 @@ export function HalvingCountdown({
             <span className="tabular-nums">
               {blocksRemaining.toLocaleString("en-US")} blocks remaining
             </span>
-            <span className="tabular-nums">{etaLabel}</span>
+            <span className="tabular-nums">
+              <MetricValue loading={!etaReady} skeletonClassName="h-3.5 w-28">
+                {etaLabel}
+              </MetricValue>
+            </span>
           </div>
         </CardContent>
       </Card>

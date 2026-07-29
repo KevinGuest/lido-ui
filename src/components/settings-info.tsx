@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Check, Copy, Info } from "lucide-react";
 
+import { MetricValue } from "@/components/metric-value";
 import type { DeploymentKind } from "@/lib/app-meta";
 import { formatUptime, numberSuffix } from "@/lib/format";
 import { mockLifetimeUptimeSeconds, mockSessionUptimeSeconds } from "@/lib/mock-data";
@@ -74,6 +75,7 @@ function InfoRow({
   copyable = true,
   tip,
   badge,
+  loading = false,
 }: {
   label: string;
   value: string;
@@ -82,10 +84,11 @@ function InfoRow({
   copyable?: boolean;
   tip?: string;
   badge?: ReactNode;
+  loading?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const payload = (copyValue ?? value).trim();
-  const canCopy = copyable && Boolean(payload) && payload !== "—";
+  const canCopy = copyable && !loading && Boolean(payload) && payload !== "—";
 
   async function copy() {
     if (!canCopy) return;
@@ -103,9 +106,11 @@ function InfoRow({
           {tip ? <Tip text={tip} /> : null}
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <p className={cn("break-all text-sm leading-snug", mono && "font-mono")}>
-            {value}
-          </p>
+            <div className={cn("break-all text-sm leading-snug", mono && "font-mono")}>
+            <MetricValue loading={loading} skeletonClassName="h-4 w-28">
+              {value === "—" ? null : value}
+            </MetricValue>
+          </div>
           {badge}
         </div>
       </div>
@@ -202,6 +207,7 @@ export function SettingsInfoPanel({
   const [hostEndpoint, setHostEndpoint] = useState("");
   const [serverAddress, setServerAddress] = useState("");
   const stats = lifetime ?? (deployment === "demo" ? demoLifetimeStats() : null);
+  const statsLoading = lifetime == null && deployment !== "demo";
 
   useEffect(() => {
     setHostEndpoint(
@@ -337,6 +343,7 @@ export function SettingsInfoPanel({
               stats ? stats.sharesAccepted.toLocaleString() : "—"
             }
             copyable={false}
+            loading={statsLoading}
             tip="All-time accepted shares across every miner."
           />
           <InfoRow
@@ -347,6 +354,7 @@ export function SettingsInfoPanel({
                 : "—"
             }
             copyable={false}
+            loading={statsLoading}
             tip="All-time rejected shares across every miner, with reject rate."
           />
           <InfoRow
@@ -357,12 +365,14 @@ export function SettingsInfoPanel({
                 : "—"
             }
             copyable={false}
+            loading={statsLoading}
             tip="Highest share difficulty ever achieved on this pool."
           />
           <InfoRow
             label="Blocks Found"
             value={stats ? String(stats.blocksFound) : "—"}
             copyable={false}
+            loading={statsLoading}
           />
           <InfoRow
             label="Session uptime"
@@ -372,6 +382,7 @@ export function SettingsInfoPanel({
                 : "—"
             }
             copyable={false}
+            loading={statsLoading}
             tip="How long this Lido process has been running — same value as the dashboard uptime card. Resets when the app restarts."
           />
           <InfoRow
@@ -382,6 +393,7 @@ export function SettingsInfoPanel({
                 : "—"
             }
             copyable={false}
+            loading={statsLoading}
             tip="Combined running time across every Lido session. Keeps counting through restarts."
           />
         </section>

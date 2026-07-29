@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 
 import { ModalOverlay } from "@/components/modal-overlay";
+import { MetricValue } from "@/components/metric-value";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,9 +27,11 @@ import type { FoundBlock } from "@/lib/mock-data";
 export function BlocksFoundCard({
   count,
   blocks,
+  loading = false,
 }: {
   count: number;
   blocks: FoundBlock[];
+  loading?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -38,10 +41,15 @@ export function BlocksFoundCard({
         type="button"
         className="group/card flex w-full flex-col overflow-hidden rounded-xl border border-border bg-transparent text-left shadow-none transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         onClick={() => setOpen(true)}
+        disabled={loading}
       >
         <div className="grid gap-1 px-4 pt-4 pb-4">
           <p className="text-sm text-muted-foreground">Blocks found</p>
-          <p className="text-2xl font-medium tabular-nums tracking-tight">{count}</p>
+          <div className="text-2xl font-medium tabular-nums tracking-tight">
+            <MetricValue loading={loading} skeletonClassName="h-7 w-12">
+              {count}
+            </MetricValue>
+          </div>
         </div>
       </button>
 
