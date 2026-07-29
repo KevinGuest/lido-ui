@@ -49,8 +49,8 @@ export const NOTIFICATION_EVENT_META: {
 }[] = [
   {
     key: "minerConnect",
-    label: "Miner connects",
-    description: "When a worker opens a stratum session.",
+    label: "Miner connection",
+    description: "When a worker opens or re-opens a stratum session.",
   },
   {
     key: "minerDisconnect",
@@ -198,10 +198,18 @@ export function emptyNotificationSettings(): NotificationSettings {
 }
 
 function normalizeEvents(raw: unknown, fallback: NotificationEvents): NotificationEvents {
-  const src = (raw && typeof raw === "object" ? raw : {}) as Partial<NotificationEvents>;
+  const src = (raw && typeof raw === "object" ? raw : {}) as Partial<NotificationEvents> & {
+    minerReconnect?: boolean;
+  };
+  // Legacy minerReconnect toggles fold into minerConnect.
+  const minerConnect =
+    typeof src.minerConnect === "boolean"
+      ? src.minerConnect || Boolean(src.minerReconnect)
+      : typeof src.minerReconnect === "boolean"
+        ? src.minerReconnect
+        : fallback.minerConnect;
   return {
-    minerConnect:
-      typeof src.minerConnect === "boolean" ? src.minerConnect : fallback.minerConnect,
+    minerConnect,
     minerDisconnect:
       typeof src.minerDisconnect === "boolean"
         ? src.minerDisconnect

@@ -1,8 +1,18 @@
 import { unstable_noStore as noStore } from "next/cache";
 
+import { deploymentKind } from "@/lib/app-meta";
 import { applyLiveChainSnapshot, fetchLiveChainSnapshot } from "@/lib/live-chain";
 import { deviceLabel } from "@/lib/device-label";
-import { buildMockDashboard, type ChartPoint, type DashboardPayload, type FoundBlock, type MinerChartSeries, type NetworkInfo, type Worker } from "@/lib/mock-data";
+import {
+  buildMockDashboard,
+  type ChartPoint,
+  type DashboardPayload,
+  type DifficultyAdjustment,
+  type FoundBlock,
+  type MinerChartSeries,
+  type NetworkInfo,
+  type Worker,
+} from "@/lib/mock-data";
 import { discoverMinerHosts } from "@/lib/network-scan";
 import { configuredStratumUrl as configuredStratumUrlPublic } from "@/lib/pool-public";
 
@@ -19,6 +29,13 @@ function useMockData() {
     return false;
   }
   return env("GITHUB_PAGES") === "true";
+}
+
+/** Public hosted + demo keep mempool.space; Umbrel / self-hosted use bitcoind only. */
+function useMempoolChainFallback() {
+  if (useMockData()) return true;
+  const kind = deploymentKind();
+  return kind === "public" || kind === "demo";
 }
 
 function poolBaseUrl() {
@@ -184,7 +201,35 @@ type LiveNetworkResponse = {
   verificationprogress?: number | null;
   verificationProgress?: number | null;
   next?: { height?: number };
+  /** From local bitcoind headers (Umbrel / self-hosted). */
+  difficultyAdjustment?: DifficultyAdjustment | null;
 };
+
+function mapDifficultyAdjustment(raw: unknown): DifficultyAdjustment | null {
+  if (!raw || typeof raw !== "object") return null;
+  const src = raw as Partial<DifficultyAdjustment> & { timeAvg?: number };
+  const timeAvgMs = Number(src.timeAvgMs ?? src.timeAvg);
+  const progressPercent = Number(src.progressPercent);
+  const remainingBlocks = Number(src.remainingBlocks);
+  const nextRetargetHeight = Number(src.nextRetargetHeight);
+  if (
+    !Number.isFinite(progressPercent) ||
+    !Number.isFinite(remainingBlocks) ||
+    !Number.isFinite(nextRetargetHeight)
+  ) {
+    return null;
+  }
+  return {
+    progressPercent,
+    difficultyChange: Number(src.difficultyChange) || 0,
+    previousRetarget: Number(src.previousRetarget) || 0,
+    remainingBlocks,
+    nextRetargetHeight,
+    estimatedRetargetDate: Number(src.estimatedRetargetDate) || 0,
+    timeAvgMs: Number.isFinite(timeAvgMs) && timeAvgMs > 0 ? timeAvgMs : 600_000,
+    expectedBlocks: Number(src.expectedBlocks) || 0,
+  };
+}
 
 function mapNetwork(raw: LiveNetworkResponse | null, fallbackHeight: number): NetworkInfo {
   const height = Number(raw?.height ?? raw?.blocks) || fallbackHeight;
@@ -213,6 +258,9 @@ function mapNetwork(raw: LiveNetworkResponse | null, fallbackHeight: number): Ne
 }
 
 async function loadLiveChain() {
+  if (!useMempoolChainFallback()) {
+    return null;
+  }
   try {
     return await fetchLiveChainSnapshot(mempoolBaseUrl());
   } catch {
@@ -640,7 +688,7 @@ export async function getDashboard(): Promise<DashboardPayload> {
     : [];
 
   const network = mapNetwork(networkRaw, pool.blockHeight);
-  // Prefer node RPC; fill gaps from mempool (common on public hosts without bitcoind stats).
+  // Public/demo: fill gaps from mempool. Umbrel/self-hosted: bitcoind only.
   if (liveChain) {
     if (!network.difficulty && liveChain.difficulty) {
       network.difficulty = liveChain.difficulty;
@@ -659,7 +707,10 @@ export async function getDashboard(): Promise<DashboardPayload> {
       network.pooledTx = liveChain.pooledTx;
     }
   }
-  const difficultyAdjustment = liveChain?.difficultyAdjustment ?? null;
+  const difficultyAdjustment =
+    mapDifficultyAdjustment(networkRaw?.difficultyAdjustment) ??
+    liveChain?.difficultyAdjustment ??
+    null;
   const sv2AuthorityPublicKey =
     sv2Info?.enabled && sv2Info.authorityPublicKey ? sv2Info.authorityPublicKey : null;
 

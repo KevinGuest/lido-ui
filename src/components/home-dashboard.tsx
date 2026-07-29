@@ -587,8 +587,15 @@ export function HomeDashboard({
           />
         )}
 
-        <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-          <p className="min-w-0 text-left">
+        <div
+          className={cn(
+            "flex flex-col gap-3 text-sm text-muted-foreground",
+            publicMode
+              ? "sm:flex-row sm:items-end sm:justify-between sm:gap-6"
+              : "items-center text-center",
+          )}
+        >
+          <p className={cn("min-w-0", publicMode ? "text-left" : "text-center")}>
             <span className="text-black dark:text-white">Lido</span> is a fully
             open-source solo Bitcoin mining pool — a fork of{" "}
             <a
@@ -601,15 +608,17 @@ export function HomeDashboard({
             </a>
             .
           </p>
-          <Link
-            href="/terms"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "default" }),
-              "shrink-0 self-start bg-transparent hover:bg-muted/40 sm:self-auto dark:bg-transparent dark:hover:bg-muted/40",
-            )}
-          >
-            Terms of Service
-          </Link>
+          {publicMode ? (
+            <Link
+              href="/terms"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "default" }),
+                "shrink-0 self-start bg-transparent hover:bg-muted/40 sm:self-auto dark:bg-transparent dark:hover:bg-muted/40",
+              )}
+            >
+              Terms of Service
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>
