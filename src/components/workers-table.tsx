@@ -34,7 +34,15 @@ import {
 import { RelativeTime } from "@/components/relative-time";
 import { ModalOverlay } from "@/components/modal-overlay";
 import { deviceLabel } from "@/lib/device-label";
-import { formatUptime, hashSuffix, numberSuffix } from "@/lib/format";
+import {
+  formatFan,
+  formatTempC,
+  formatUptime,
+  formatVoltage,
+  formatWatts,
+  hashSuffix,
+  numberSuffix,
+} from "@/lib/format";
 import { minerColor } from "@/lib/miner-colors";
 import { minerInfoUrl } from "@/lib/miner-info-url";
 import type { Worker } from "@/lib/mock-data";
@@ -195,6 +203,36 @@ function DetailValue({ children, className }: { children: ReactNode; className?:
   );
 }
 
+function deviceTelemetryRows(worker: Worker): { label: string; value: ReactNode }[] {
+  const temp = formatTempC(worker.tempC);
+  const vr = formatTempC(worker.vrTempC);
+  const power = formatWatts(worker.powerW);
+  const volts = formatVoltage(worker.voltageV);
+  const fan = formatFan(worker.fanRpm, worker.fanPercent);
+  const rows: { label: string; value: ReactNode }[] = [];
+
+  if (temp) {
+    rows.push({
+      label: "Temperature",
+      value: <DetailValue>{vr ? `${temp} · VR ${vr}` : temp}</DetailValue>,
+    });
+  }
+  if (power) {
+    rows.push({
+      label: "Power",
+      value: <DetailValue>{volts ? `${power} · ${volts}` : power}</DetailValue>,
+    });
+  }
+  if (fan) {
+    rows.push({
+      label: "Fan",
+      value: <DetailValue>{fan}</DetailValue>,
+    });
+  }
+
+  return rows;
+}
+
 function WorkerDialog({
   worker,
   rank,
@@ -257,6 +295,7 @@ function WorkerDialog({
       label: "Hashrate",
       value: <DetailValue>{hashSuffix(worker.hashrate)}</DetailValue>,
     },
+    ...deviceTelemetryRows(worker),
     {
       label: "Shares",
       value: (

@@ -13,6 +13,8 @@ export type LiveChainSnapshot = {
   minFeeBtcKvB: number | null;
   pooledTx: number | null;
   difficultyAdjustment: DifficultyAdjustment | null;
+  /** BTC spot in fiat — mempool.space only (public/demo). */
+  prices: Record<string, number> | null;
 };
 
 type MempoolDifficultyAdjustment = {
@@ -72,7 +74,7 @@ export async function fetchLiveChainSnapshot(
 ): Promise<LiveChainSnapshot> {
   const base = baseUrl.replace(/\/+$/, "") || DEFAULT_MEMPOOL_API;
 
-  const [heightRaw, difficultyRaw, hashrateRaw, mempoolRaw, feesRaw] =
+  const [heightRaw, difficultyRaw, hashrateRaw, mempoolRaw, feesRaw, pricesRaw] =
     await Promise.all([
       fetchJson<number>(`${base}/blocks/tip/height`).catch(() => null),
       fetchJson<MempoolDifficultyAdjustment>(`${base}/v1/difficulty-adjustment`).catch(
@@ -81,6 +83,7 @@ export async function fetchLiveChainSnapshot(
       fetchJson<MempoolHashrate>(`${base}/v1/mining/hashrate/3d`).catch(() => null),
       fetchJson<MempoolStats>(`${base}/mempool`).catch(() => null),
       fetchJson<MempoolFees>(`${base}/v1/fees/recommended`).catch(() => null),
+      fetchJson<Record<string, unknown>>(`${base}/v1/prices`).catch(() => null),
     ]);
 
   const height = Number(heightRaw);
@@ -88,6 +91,15 @@ export async function fetchLiveChainSnapshot(
   const networkHashrate = Number(hashrateRaw?.currentHashrate);
   const minFeeSatVb = Number(feesRaw?.minimumFee ?? feesRaw?.economyFee);
   const pooledTx = Number(mempoolRaw?.count);
+
+  const prices: Record<string, number> = {};
+  if (pricesRaw) {
+    for (const [code, raw] of Object.entries(pricesRaw)) {
+      if (code === "time") continue;
+      const amount = Number(raw);
+      if (Number.isFinite(amount) && amount > 0) prices[code] = amount;
+    }
+  }
 
   return {
     height: Number.isFinite(height) && height > 0 ? height : null,
@@ -100,6 +112,7 @@ export async function fetchLiveChainSnapshot(
         : null,
     pooledTx: Number.isFinite(pooledTx) ? pooledTx : null,
     difficultyAdjustment: difficultyRaw ? mapDifficultyAdjustment(difficultyRaw) : null,
+    prices: Object.keys(prices).length > 0 ? prices : null,
   };
 }
 
@@ -129,6 +142,7 @@ export function applyLiveChainSnapshot(
       blockHeight,
     },
     network,
+    prices: live.prices ?? dashboard.prices ?? null,
     difficultyAdjustment: live.difficultyAdjustment ?? dashboard.difficultyAdjustment,
     foundBlocks: dashboard.foundBlocks.map((block, index) => ({
       ...block,

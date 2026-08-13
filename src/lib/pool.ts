@@ -4,6 +4,10 @@ import { deploymentKind } from "@/lib/app-meta";
 import { applyLiveChainSnapshot, fetchLiveChainSnapshot } from "@/lib/live-chain";
 import { deviceLabel } from "@/lib/device-label";
 import {
+  EMPTY_DEVICE_TELEMETRY,
+  parseDeviceTelemetry,
+} from "@/lib/device-telemetry";
+import {
   buildMockDashboard,
   type ChartPoint,
   type DashboardPayload,
@@ -318,6 +322,11 @@ function poolWorkerToWorker(session: PoolWorker, fallbackAddress = ""): Worker {
     lastSeen: session.lastSeen,
     startTime: session.startTime,
     tempC: null,
+    vrTempC: null,
+    powerW: null,
+    voltageV: null,
+    fanRpm: null,
+    fanPercent: null,
     dashboardUrl: null,
     blocksFound: 0,
     online: true,
@@ -390,7 +399,7 @@ async function loadMinerDevice(host: string): Promise<Worker | null> {
       dash?.performance?.bestSessionDiff ??
       dash?.stratum?.pools?.find((pool) => pool.user)?.bestDiff,
   );
-  const tempC = info?.temp ?? info?.asicTemp ?? dash?.thermal?.asicTemp ?? null;
+  const telemetry = parseDeviceTelemetry(info, dash);
   const uptimeSeconds = info?.uptimeSeconds ?? dash?.system?.uptime ?? null;
   const ip = info?.ipAddress || host;
 
@@ -410,7 +419,8 @@ async function loadMinerDevice(host: string): Promise<Worker | null> {
     startTime: uptimeSeconds
       ? new Date(Date.now() - uptimeSeconds * 1000).toISOString()
       : null,
-    tempC: tempC == null ? null : Number(tempC),
+    ...EMPTY_DEVICE_TELEMETRY,
+    ...telemetry,
     dashboardUrl: dashboardUrlFor(ip),
     blocksFound: 0,
     online: true,
@@ -426,6 +436,8 @@ async function resolveMinerHosts(): Promise<string[]> {
 }
 
 async function loadDevices(): Promise<Worker[]> {
+  // Public hosts cannot reach home-LAN AxeOS HTTP (NAT). Skip the scan entirely.
+  if (deploymentKind() === "public") return [];
   const hosts = await resolveMinerHosts();
   if (hosts.length === 0) return [];
   return (await Promise.all(hosts.map((host) => loadMinerDevice(host)))).filter(
@@ -488,6 +500,11 @@ function mergeWorkers(poolWorkers: Worker[], devices: Worker[]): Worker[] {
       bestDifficulty: Math.max(poolWorker.bestDifficulty, device.bestDifficulty),
       uptimeSeconds: device.uptimeSeconds ?? poolWorker.uptimeSeconds,
       tempC: device.tempC ?? poolWorker.tempC,
+      vrTempC: device.vrTempC ?? poolWorker.vrTempC,
+      powerW: device.powerW ?? poolWorker.powerW,
+      voltageV: device.voltageV ?? poolWorker.voltageV,
+      fanRpm: device.fanRpm ?? poolWorker.fanRpm,
+      fanPercent: device.fanPercent ?? poolWorker.fanPercent,
       dashboardUrl: device.dashboardUrl,
       address: poolWorker.address || device.address,
     };
@@ -606,6 +623,7 @@ function emptyLiveDashboard(): DashboardPayload {
     overallUptimeSeconds: null,
     sharesAccepted: 0,
     sharesRejected: 0,
+    prices: null,
     sv2AuthorityPublicKey: null,
   };
 }
@@ -743,6 +761,7 @@ export async function getDashboard(): Promise<DashboardPayload> {
       typeof info.overallUptimeSeconds === "number" ? info.overallUptimeSeconds : null,
     sharesAccepted: Number(info.sharesAccepted) || 0,
     sharesRejected: Number(info.sharesRejected) || 0,
+    prices: liveChain?.prices ?? null,
     sv2AuthorityPublicKey,
   };
 }

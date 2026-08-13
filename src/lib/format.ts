@@ -52,3 +52,41 @@ export function feeRateSats(btcPerKvB: number): string {
   if (satsPerVb >= 1) return `${satsPerVb.toFixed(1)} sat/vB`;
   return `${satsPerVb.toFixed(3)} sat/vB`;
 }
+
+/** ASIC / board temp. Null when missing — never fake 0°C. */
+export function formatTempC(value: number | null | undefined): string | null {
+  if (value == null || !Number.isFinite(value) || value <= 0) return null;
+  const digits = value >= 100 ? 0 : 1;
+  return `${value.toFixed(digits)}°C`;
+}
+
+/** Board power. Null when missing — never fake 0 W. */
+export function formatWatts(value: number | null | undefined): string | null {
+  if (value == null || !Number.isFinite(value) || value <= 0) return null;
+  if (value >= 1000) {
+    const kw = value / 1000;
+    return `${kw.toFixed(kw >= 10 ? 1 : 2)} kW`;
+  }
+  return `${value >= 100 ? value.toFixed(0) : value.toFixed(1)} W`;
+}
+
+export function formatVoltage(value: number | null | undefined): string | null {
+  if (value == null || !Number.isFinite(value) || value <= 0) return null;
+  return `${value >= 20 ? value.toFixed(1) : value.toFixed(2)} V`;
+}
+
+export function formatFan(
+  rpm: number | null | undefined,
+  percent: number | null | undefined,
+): string | null {
+  const rpmText =
+    rpm != null && Number.isFinite(rpm) && rpm > 0
+      ? `${Math.round(rpm).toLocaleString()} rpm`
+      : null;
+  const pctText =
+    percent != null && Number.isFinite(percent) && percent > 0
+      ? `${Math.round(percent)}%`
+      : null;
+  if (rpmText && pctText) return `${rpmText} · ${pctText}`;
+  return rpmText ?? pctText;
+}

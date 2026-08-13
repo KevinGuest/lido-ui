@@ -3,30 +3,23 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
+import { ActivityCards } from "@/components/activity-cards";
 import { AppHeader } from "@/components/app-header";
 import { AutoRefresh } from "@/components/auto-refresh";
-import { BlocksFoundCard } from "@/components/blocks-found-card";
 import { BootLogo } from "@/components/boot-logo";
+import { DeviceTelemetryCharts } from "@/components/device-telemetry-charts";
 import { DifficultyAdjustmentBar } from "@/components/difficulty-adjustment-bar";
 import { HalvingCountdown } from "@/components/halving-countdown";
 import { HashrateChart } from "@/components/hashrate-chart";
-import { MetricValue } from "@/components/metric-value";
 import { PublicDeviceTable } from "@/components/public-device-table";
 import { UpdateNotifier } from "@/components/update-notifier";
 import { WorkersTable } from "@/components/workers-table";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { useUpdateAvailability } from "@/hooks/use-update-availability";
 import { useAddressSession } from "@/lib/address-session";
 import { addressHasPoolWorkers } from "@/lib/address-auth";
 import { PUBLIC_POOL_GITHUB_URL, type DeploymentKind } from "@/lib/app-meta";
 import { shortenAddress } from "@/lib/bitcoin-address";
-import { formatUptime, hashSuffix, numberSuffix } from "@/lib/format";
 import { applyLiveChainSnapshot, fetchLiveChainSnapshot } from "@/lib/live-chain";
 import type { ChartPoint, DashboardPayload, MinerChartSeries, Worker } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
@@ -302,6 +295,9 @@ export function HomeDashboard({
     network,
     difficultyAdjustment,
     uptimeSeconds,
+    sharesAccepted,
+    sharesRejected,
+    prices,
     sv2AuthorityPublicKey,
   } = dashboard;
 
@@ -438,6 +434,25 @@ export function HomeDashboard({
   const showApp = !splashOpaque;
   const metricsLoading = clientMounted && liveChain && !chainReady;
 
+  const deviceStats = useMemo(() => {
+    const online = (viewingPersonal ? personalWorkers : workers).filter(
+      (worker) => worker.online !== false,
+    );
+    const temps = online
+      .map((worker) => worker.tempC)
+      .filter((value): value is number => value != null && Number.isFinite(value) && value > 0);
+    const powers = online
+      .map((worker) => worker.powerW)
+      .filter((value): value is number => value != null && Number.isFinite(value) && value > 0);
+    return {
+      hottestTempC: temps.length > 0 ? Math.max(...temps) : null,
+      avgTempC:
+        temps.length > 0 ? temps.reduce((sum, value) => sum + value, 0) / temps.length : null,
+      totalPowerW:
+        powers.length > 0 ? powers.reduce((sum, value) => sum + value, 0) : null,
+    };
+  }, [viewingPersonal, personalWorkers, workers]);
+
   return (
     <div className="relative">
       {splashMounted ? (
@@ -523,67 +538,31 @@ export function HomeDashboard({
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Uptime</CardDescription>
-              <CardTitle className="text-2xl tabular-nums">
-                <MetricValue
-                  loading={metricsLoading && uptimeSeconds == null}
-                  skeletonClassName="h-7 w-24"
-                >
-                  {uptimeSeconds == null || uptimeSeconds <= 0
-                    ? null
-                    : formatUptime(uptimeSeconds)}
-                </MetricValue>
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total hashrate</CardDescription>
-              <CardTitle className="text-2xl tabular-nums">
-                <MetricValue
-                  loading={metricsLoading}
-                  skeletonClassName="h-7 w-28"
-                >
-                  {hashSuffix(displayHashrate)}
-                </MetricValue>
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Best difficulty</CardDescription>
-              <CardTitle className="text-2xl tabular-nums">
-                <MetricValue
-                  loading={metricsLoading && !displayBestDifficulty}
-                  skeletonClassName="h-7 w-24"
-                >
-                  {displayBestDifficulty ? numberSuffix(displayBestDifficulty) : null}
-                </MetricValue>
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Network difficulty</CardDescription>
-              <CardTitle className="text-2xl tabular-nums">
-                <MetricValue
-                  loading={metricsLoading && !network.difficulty}
-                  skeletonClassName="h-7 w-28"
-                >
-                  {network.difficulty ? numberSuffix(network.difficulty) : null}
-                </MetricValue>
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <BlocksFoundCard
-            count={displayBlocksFound}
-            blocks={displayFoundBlocks}
-            loading={metricsLoading}
-          />
-        </div>
+        <ActivityCards
+          editable={!publicMode}
+          loading={metricsLoading}
+          allowDevice={!publicMode}
+          values={{
+            uptimeSeconds,
+            hashrate: displayHashrate,
+            bestDifficulty: displayBestDifficulty,
+            networkDifficulty: network.difficulty,
+            blocksFound: displayBlocksFound,
+            foundBlocks: displayFoundBlocks,
+            connectedMiners: viewingPersonal
+              ? personalWorkers.filter((worker) => worker.online !== false).length
+              : pool.totalMiners,
+            sharesAccepted: sharesAccepted ?? 0,
+            sharesRejected: sharesRejected ?? 0,
+            blockHeight: network.height || pool.blockHeight,
+            networkHashrate: network.networkHashrate,
+            minFeeBtcKvB: network.minFeeBtcKvB,
+            hottestTempC: deviceStats.hottestTempC,
+            avgTempC: deviceStats.avgTempC,
+            totalPowerW: deviceStats.totalPowerW,
+            prices: prices ?? null,
+          }}
+        />
 
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="min-w-0 lg:col-span-2">
@@ -608,6 +587,13 @@ export function HomeDashboard({
           autoSelectMinerIds={autoSelectMinerIds}
           initialPage={viewingPersonal ? "miners" : undefined}
         />
+
+        {!publicMode ? (
+          <DeviceTelemetryCharts
+            workers={workers}
+            mock={dashboard.source === "mock"}
+          />
+        ) : null}
 
         {publicMode && !loggedInAddress ? (
           <PublicDeviceTable workers={workers} />

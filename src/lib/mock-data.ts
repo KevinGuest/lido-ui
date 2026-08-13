@@ -97,6 +97,15 @@ export type Worker = {
   lastSeen: string | null;
   startTime: string | null;
   tempC: number | null;
+  /** Voltage-regulator temp when the device reports it. */
+  vrTempC?: number | null;
+  /** Instantaneous board power in watts. */
+  powerW?: number | null;
+  /** Supply voltage in volts. */
+  voltageV?: number | null;
+  fanRpm?: number | null;
+  /** Fan duty 0–100. */
+  fanPercent?: number | null;
   dashboardUrl: string | null;
   /** Product / project page (website or repo). */
   infoUrl?: string | null;
@@ -121,6 +130,8 @@ export type DashboardPayload = {
   overallUptimeSeconds?: number | null;
   sharesAccepted?: number;
   sharesRejected?: number;
+  /** Fiat spot from mempool.space (public/demo only). Umbrel/bitcoind has none. */
+  prices?: Record<string, number> | null;
   /** Live pool SV2 authority pubkey for Connect (Noise auth). */
   sv2AuthorityPublicKey?: string | null;
 };
@@ -215,6 +226,11 @@ type MockMinerSeed = {
    */
   sessionFraction: number;
   tempC: number;
+  vrTempC?: number;
+  powerW?: number;
+  voltageV?: number;
+  fanRpm?: number;
+  fanPercent?: number;
   dashboardHost?: string;
   phase: number;
   /** When false, shown as disconnected in the miners table. */
@@ -790,9 +806,56 @@ function sumCharts(series: MinerChartSeries[], now = Date.now()): ChartPoint[] {
   });
 }
 
+function mockDeviceStats(miner: MockMinerSeed, online: boolean, now: number) {
+  if (!online) {
+    return {
+      tempC: null,
+      vrTempC: null,
+      powerW: null,
+      voltageV: null,
+      fanRpm: null,
+      fanPercent: null,
+    };
+  }
+
+  const home = miner.hashrate < 2e13;
+  const tempC =
+    miner.tempC +
+    1.5 * Math.sin(now / 90_000 + miner.phase) +
+    0.5 * Math.cos(now / 140_000 + miner.phase * 1.2);
+  const vrTempC = miner.vrTempC ?? tempC + 3.4 + (miner.phase % 2);
+  const basePower =
+    miner.powerW ??
+    (home
+      ? 10 + (miner.tempC % 9) * 0.85
+      : miner.hashrate >= 2e14
+        ? 3550
+        : miner.hashrate >= 1e14
+          ? 3250
+          : 2200);
+  const powerW = Math.max(
+    0.1,
+    basePower * (1 + 0.03 * Math.sin(now / 70_000 + miner.phase)),
+  );
+  const voltageV = miner.voltageV ?? (home ? 5.05 + (miner.phase % 1) * 0.08 : 12.2);
+  const fanPercent =
+    miner.fanPercent ?? Math.min(100, Math.max(25, Math.round(38 + tempC * 0.55)));
+  const fanRpm = miner.fanRpm ?? Math.round(2800 + fanPercent * 28 + miner.phase * 40);
+
+  return {
+    tempC: Math.round(tempC * 10) / 10,
+    vrTempC: Math.round(vrTempC * 10) / 10,
+    powerW: Math.round(powerW * 10) / 10,
+    voltageV: Math.round(voltageV * 100) / 100,
+    fanRpm,
+    fanPercent,
+  };
+}
+
 function buildMockWorkers(now = Date.now()): Worker[] {
   return getMockMinerSeeds().map((miner, index) => {
     const session = mockWorkerSession(miner, index, now);
+    const telemetry = mockDeviceStats(miner, session.online, now);
     return {
       id: miner.id,
       name: miner.name,
@@ -811,7 +874,12 @@ function buildMockWorkers(now = Date.now()): Worker[] {
       startTime: session.online
         ? new Date(session.connectedSinceMs).toISOString()
         : null,
-      tempC: session.online ? miner.tempC : null,
+      tempC: telemetry.tempC,
+      vrTempC: telemetry.vrTempC,
+      powerW: telemetry.powerW,
+      voltageV: telemetry.voltageV,
+      fanRpm: telemetry.fanRpm,
+      fanPercent: telemetry.fanPercent,
       dashboardUrl: miner.dashboardHost ? `http://${miner.dashboardHost}` : null,
       blocksFound: 0,
       online: session.online,
@@ -898,6 +966,7 @@ export function buildMockDashboard(now = Date.now()): DashboardPayload {
     overallUptimeSeconds: mockLifetimeUptimeSeconds(now),
     sharesAccepted: 512_840,
     sharesRejected: 1_284,
+    prices: null,
     foundBlocks: [
       {
         height: blockHeight - 17_740,
