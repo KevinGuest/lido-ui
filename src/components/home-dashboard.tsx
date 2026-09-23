@@ -7,7 +7,6 @@ import { ActivityCards } from "@/components/activity-cards";
 import { AppHeader } from "@/components/app-header";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { BootLogo } from "@/components/boot-logo";
-import { DeviceTelemetryCharts } from "@/components/device-telemetry-charts";
 import { DifficultyAdjustmentBar } from "@/components/difficulty-adjustment-bar";
 import { HalvingCountdown } from "@/components/halving-countdown";
 import { HashrateChart } from "@/components/hashrate-chart";
@@ -434,25 +433,6 @@ export function HomeDashboard({
   const showApp = !splashOpaque;
   const metricsLoading = clientMounted && liveChain && !chainReady;
 
-  const deviceStats = useMemo(() => {
-    const online = (viewingPersonal ? personalWorkers : workers).filter(
-      (worker) => worker.online !== false,
-    );
-    const temps = online
-      .map((worker) => worker.tempC)
-      .filter((value): value is number => value != null && Number.isFinite(value) && value > 0);
-    const powers = online
-      .map((worker) => worker.powerW)
-      .filter((value): value is number => value != null && Number.isFinite(value) && value > 0);
-    return {
-      hottestTempC: temps.length > 0 ? Math.max(...temps) : null,
-      avgTempC:
-        temps.length > 0 ? temps.reduce((sum, value) => sum + value, 0) / temps.length : null,
-      totalPowerW:
-        powers.length > 0 ? powers.reduce((sum, value) => sum + value, 0) : null,
-    };
-  }, [viewingPersonal, personalWorkers, workers]);
-
   return (
     <div className="relative">
       {splashMounted ? (
@@ -541,7 +521,6 @@ export function HomeDashboard({
         <ActivityCards
           editable={!publicMode}
           loading={metricsLoading}
-          allowDevice={!publicMode}
           values={{
             uptimeSeconds,
             hashrate: displayHashrate,
@@ -557,9 +536,6 @@ export function HomeDashboard({
             blockHeight: network.height || pool.blockHeight,
             networkHashrate: network.networkHashrate,
             minFeeBtcKvB: network.minFeeBtcKvB,
-            hottestTempC: deviceStats.hottestTempC,
-            avgTempC: deviceStats.avgTempC,
-            totalPowerW: deviceStats.totalPowerW,
             prices: prices ?? null,
           }}
         />
@@ -587,13 +563,6 @@ export function HomeDashboard({
           autoSelectMinerIds={autoSelectMinerIds}
           initialPage={viewingPersonal ? "miners" : undefined}
         />
-
-        {!publicMode ? (
-          <DeviceTelemetryCharts
-            workers={workers}
-            mock={dashboard.source === "mock"}
-          />
-        ) : null}
 
         {publicMode && !loggedInAddress ? (
           <PublicDeviceTable workers={workers} />

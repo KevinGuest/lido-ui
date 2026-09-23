@@ -36,19 +36,15 @@ export type ActivityCardId =
   | "blockHeight"
   | "networkHashrate"
   | "avgTxFee"
-  | "temperature"
-  | "wattage"
   | "btcPrice"
   | "satsPerFiat";
 
-export type ActivityCardGroup = "pool" | "chain" | "device" | "market";
+export type ActivityCardGroup = "pool" | "chain" | "market";
 
 export type ActivityCardDef = {
   id: ActivityCardId;
   label: string;
   group: ActivityCardGroup;
-  /** Home/LAN only — hide on public (no miner HTTP). */
-  deviceOnly?: boolean;
   /** Needs a fiat price feed (mempool.space on public/demo). */
   needsPrice?: boolean;
 };
@@ -64,8 +60,6 @@ export const ACTIVITY_CARD_CATALOG: ActivityCardDef[] = [
   { id: "blockHeight", label: "Block height", group: "chain" },
   { id: "networkHashrate", label: "Network hashrate", group: "chain" },
   { id: "avgTxFee", label: "Average tx fee", group: "chain" },
-  { id: "temperature", label: "Temperature", group: "device", deviceOnly: true },
-  { id: "wattage", label: "Wattage", group: "device", deviceOnly: true },
   { id: "btcPrice", label: "BTC price", group: "market", needsPrice: true },
   { id: "satsPerFiat", label: "Sats per unit", group: "market", needsPrice: true },
 ];
@@ -97,7 +91,6 @@ export function isFiatCurrency(value: string): value is FiatCurrency {
 }
 
 export type ActivityCardAvailability = {
-  device: boolean;
   prices: boolean;
 };
 
@@ -105,7 +98,6 @@ export function cardIsAvailable(
   def: ActivityCardDef,
   availability: ActivityCardAvailability,
 ): boolean {
-  if (def.deviceOnly && !availability.device) return false;
   if (def.needsPrice && !availability.prices) return false;
   return true;
 }

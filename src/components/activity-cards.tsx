@@ -57,7 +57,7 @@ import {
   type ActivityCardLayout,
   type FiatCurrency,
 } from "@/lib/activity-cards";
-import { feeRateSats, formatTempC, formatUptime, formatWatts, hashSuffix, numberSuffix } from "@/lib/format";
+import { feeRateSats, formatUptime, hashSuffix, numberSuffix } from "@/lib/format";
 import type { FoundBlock } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -74,20 +74,16 @@ export type ActivityCardValues = {
   blockHeight: number;
   networkHashrate: number;
   minFeeBtcKvB: number;
-  hottestTempC: number | null;
-  avgTempC: number | null;
-  totalPowerW: number | null;
   prices: Record<string, number> | null;
 };
 
 const GROUP_LABEL: Record<ActivityCardGroup, string> = {
   pool: "Pool",
   chain: "Chain",
-  device: "Device",
   market: "Market",
 };
 
-const GROUP_ORDER: ActivityCardGroup[] = ["pool", "chain", "device", "market"];
+const GROUP_ORDER: ActivityCardGroup[] = ["pool", "chain", "market"];
 
 function SortableCardShell({
   id,
@@ -207,23 +203,6 @@ function cardValue(
         label,
         node: values.minFeeBtcKvB > 0 ? feeRateSats(values.minFeeBtcKvB) : null,
       };
-    case "temperature": {
-      const hottest = formatTempC(values.hottestTempC);
-      const avg = formatTempC(values.avgTempC);
-      const showAvg =
-        hottest &&
-        avg &&
-        values.avgTempC != null &&
-        values.hottestTempC != null &&
-        Math.abs(values.hottestTempC - values.avgTempC) > 0.15;
-      return {
-        label,
-        hint: showAvg ? `avg ${avg}` : undefined,
-        node: hottest,
-      };
-    }
-    case "wattage":
-      return { label, node: formatWatts(values.totalPowerW) };
     case "btcPrice": {
       const price = values.prices?.[fiat];
       return {
@@ -332,19 +311,14 @@ function EditCardsMenu({
 export function ActivityCards({
   editable,
   loading = false,
-  allowDevice,
   values,
 }: {
   editable: boolean;
   loading?: boolean;
-  allowDevice: boolean;
   values: ActivityCardValues;
 }) {
   const hasPrices = availableFiats(values.prices).length > 0;
-  const availability = useMemo(
-    () => ({ device: allowDevice, prices: hasPrices }),
-    [allowDevice, hasPrices],
-  );
+  const availability = useMemo(() => ({ prices: hasPrices }), [hasPrices]);
   const rawLayout = useSyncExternalStore(
     subscribeActivityCardLayout,
     getActivityCardLayoutSnapshot,
