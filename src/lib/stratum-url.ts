@@ -8,18 +8,18 @@ export const UMBREL_STRATUM_V2_PORT = 2302;
 export const PUBLIC_STRATUM_V1_PORT = 3333;
 export const PUBLIC_STRATUM_V2_PORT = 4444;
 
-function usePublicStratumPorts(): boolean {
+function publicStratumPorts(): boolean {
   return isPublicDeployment();
 }
 
 /** Active Stratum V1 port for this deployment. */
 export function stratumV1Port(): number {
-  return usePublicStratumPorts() ? PUBLIC_STRATUM_V1_PORT : UMBREL_STRATUM_V1_PORT;
+  return publicStratumPorts() ? PUBLIC_STRATUM_V1_PORT : UMBREL_STRATUM_V1_PORT;
 }
 
 /** Active Stratum V2 port for this deployment. */
 export function stratumV2Port(): number {
-  return usePublicStratumPorts() ? PUBLIC_STRATUM_V2_PORT : UMBREL_STRATUM_V2_PORT;
+  return publicStratumPorts() ? PUBLIC_STRATUM_V2_PORT : UMBREL_STRATUM_V2_PORT;
 }
 
 /** @deprecated Prefer stratumV1Port() — value is fixed at module load. */
