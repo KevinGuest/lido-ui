@@ -25,7 +25,7 @@ function env(name: string): string {
   return (process.env[name] ?? "").trim();
 }
 
-function useMockData() {
+function mockDataEnabled() {
   // Explicit local override — e.g. preview public UI without a live pool.
   if (env("LIDO_USE_MOCK") === "true") return true;
   // Public (lido.wtf) always hits the live pool API — mock is demo/Pages only.
@@ -36,14 +36,14 @@ function useMockData() {
 }
 
 /** Public hosted + demo keep mempool.space; Umbrel / self-hosted use bitcoind only. */
-function useMempoolChainFallback() {
-  if (useMockData()) return true;
+function mempoolChainFallbackEnabled() {
+  if (mockDataEnabled()) return true;
   const kind = deploymentKind();
   return kind === "public" || kind === "demo";
 }
 
 function poolBaseUrl() {
-  if (useMockData()) return "";
+  if (mockDataEnabled()) return "";
   return env("PUBLIC_POOL_API_URL").replace(/\/+$/, "");
 }
 
@@ -262,7 +262,7 @@ function mapNetwork(raw: LiveNetworkResponse | null, fallbackHeight: number): Ne
 }
 
 async function loadLiveChain() {
-  if (!useMempoolChainFallback()) {
+  if (!mempoolChainFallbackEnabled()) {
     return null;
   }
   try {
@@ -630,7 +630,7 @@ function emptyLiveDashboard(): DashboardPayload {
 
 export async function getDashboard(): Promise<DashboardPayload> {
   // Demo/mock: fake miners + live chain stats from mempool.space.
-  if (useMockData()) {
+  if (mockDataEnabled()) {
     // Local mock refreshes each request; static GH Pages export stays build-time.
     if (env("GITHUB_PAGES") !== "true") {
       noStore();
